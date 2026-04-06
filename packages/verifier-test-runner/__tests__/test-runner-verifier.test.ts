@@ -85,12 +85,14 @@ describe('TestRunnerVerifier', () => {
     expect(verifier.supports).toContain('integration')
   })
 
-  it('defaults command to "npm test" when not provided', async () => {
+  it('defaults command to "npm test" when not provided and runs verify', async () => {
     const v = new TestRunnerVerifier()
     await v.initialize({ name: 'test-runner', options: {} })
-    // Access private config through any cast
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((v as any).config.command).toBe('npm test')
+    const verifyPromise = v.verify(makePlan())
+    await Promise.resolve()
+    _triggerChild('✓ default test\n', '', 0)
+    const result = await verifyPromise
+    expect(result.summary).toMatch(/\d+ passed/)
   })
 
   // -------------------------------------------------------------------------

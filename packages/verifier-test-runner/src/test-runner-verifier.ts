@@ -13,7 +13,7 @@ export interface TestRunnerConfig {
   command: string
   cwd?: string
   timeout_ms?: number
-  env?: Record<string, string>
+  env?: NodeJS.ProcessEnv
 }
 
 const DEFAULT_TIMEOUT_MS = 60_000
@@ -38,12 +38,16 @@ export class TestRunnerVerifier implements Verifier {
     const startTime = Date.now()
     const { command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS, env } = this.config
 
+    if (!command.trim()) {
+      throw new Error('TestRunnerVerifier: command must not be empty')
+    }
+
     const [cmd, ...args] = command.split(/\s+/)
 
     const { output, exitCode } = await this._runCommand(cmd, args, {
       cwd: cwd ?? process.cwd(),
       timeout_ms,
-      env: { ...process.env, ...env } as Record<string, string>,
+      env: { ...process.env, ...env },
     })
 
     const duration = Date.now() - startTime
@@ -108,7 +112,7 @@ export class TestRunnerVerifier implements Verifier {
   private _runCommand(
     cmd: string,
     args: string[],
-    opts: { cwd: string; timeout_ms: number; env: Record<string, string> },
+    opts: { cwd: string; timeout_ms: number; env: NodeJS.ProcessEnv },
   ): Promise<{ output: string; exitCode: number }> {
     return new Promise((resolve, reject) => {
       const child = spawn(cmd, args, {
@@ -125,7 +129,9 @@ export class TestRunnerVerifier implements Verifier {
         output += chunk.toString()
       })
 
+      let timedOut = false
       const timer = setTimeout(() => {
+        timedOut = true
         child.kill('SIGTERM')
         resolve({ output: output + '\n[TIMEOUT]', exitCode: 1 })
       }, opts.timeout_ms)
@@ -137,7 +143,7 @@ export class TestRunnerVerifier implements Verifier {
 
       child.on('close', (code: number | null) => {
         clearTimeout(timer)
-        resolve({ output, exitCode: code ?? 1 })
+        if (!timedOut) resolve({ output, exitCode: code ?? 1 })
       })
     })
   }
@@ -146,7 +152,7 @@ export class TestRunnerVerifier implements Verifier {
     return output
       .split('\n')
       .filter((line) =>
-        /[✓✔]|passed|PASS\b|\bok\b/.test(line),
+        /[✓✔]|passed|PASS\b|^ok\b/.test(line),
       )
   }
 
