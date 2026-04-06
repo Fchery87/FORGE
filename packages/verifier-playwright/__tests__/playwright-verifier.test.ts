@@ -306,31 +306,42 @@ describe('PlaywrightVerifier', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Playwright not available — structural test
+  // Playwright not available — exercises the real catch branch in verify()
   // -------------------------------------------------------------------------
-  it('returns fail result shape when playwright is unavailable', () => {
-    // Validate the shape of the "not installed" result independently of the
-    // dynamic import mechanism (which is mocked to succeed above).
-    const result = {
-      plan_id: 'plan-001',
-      status: 'fail' as const,
-      checks: [],
-      evidence: [],
-      issues: [
-        {
-          severity: 'critical' as const,
-          description: 'playwright not installed. Run: npm install playwright',
-          file: null,
-          task_id: 'task-1',
-          auto_reopen: true,
-        },
-      ],
-      summary: 'playwright not installed. Run: npm install playwright',
-      created_at: new Date().toISOString(),
-    }
+  it('returns fail result when playwright is not installed', async () => {
+    // Reset the module registry so the next dynamic import('playwright') goes
+    // through the mock factory again, then register a throwing replacement.
+    vi.resetModules()
+    vi.doMock('playwright', () => {
+      throw new Error('Cannot find module playwright')
+    })
+
+    // Re-import the verifier so its module-level state is fresh and its
+    // dynamic import('playwright') will hit the new throwing mock.
+    const { PlaywrightVerifier: FreshVerifier } = await import(
+      '../src/playwright-verifier.js'
+    )
+    const freshVerifier = new FreshVerifier()
+    await freshVerifier.initialize({
+      name: 'playwright',
+      options: {
+        base_url: 'http://localhost:3000',
+        evidence_dir: '.forge/qa/evidence',
+        routes: [{ path: '/dashboard', name: 'dashboard' }],
+      },
+    })
+
+    const result = await freshVerifier.verify(makePlan())
     expect(result.status).toBe('fail')
-    expect(result.issues[0].description).toContain('npm install playwright')
+    expect(result.checks).toHaveLength(0)
+    expect(result.issues).toHaveLength(1)
     expect(result.issues[0].severity).toBe('critical')
+    expect(result.issues[0].description).toContain('npm install playwright')
+    expect(result.summary).toContain('npm install playwright')
+
+    // Restore normal mocks for subsequent tests
+    vi.resetModules()
+    vi.doMock('playwright', () => ({ chromium: _mockChromium }))
   })
 
   // -------------------------------------------------------------------------
