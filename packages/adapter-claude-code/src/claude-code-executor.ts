@@ -43,18 +43,27 @@ function parseLastLine(stdout: string): Record<string, unknown> | null {
   return null
 }
 
+function parseConfig(options: Record<string, unknown>): ClaudeCodeConfig {
+  const cfg: ClaudeCodeConfig = {}
+  if (typeof options['model'] === 'string') cfg.model = options['model']
+  if (typeof options['max_tokens'] === 'number') cfg.max_tokens = options['max_tokens']
+  if (typeof options['timeout_ms'] === 'number') cfg.timeout_ms = options['timeout_ms']
+  if (typeof options['working_directory'] === 'string') cfg.working_directory = options['working_directory']
+  return cfg
+}
+
 export class ClaudeCodeExecutor implements Executor {
   readonly name = 'claude-code'
 
   private config: ClaudeCodeConfig = {}
 
   async initialize(config: ExecutorConfig): Promise<void> {
-    const opts = config.options as Partial<ClaudeCodeConfig>
+    const parsed = parseConfig(config.options as Record<string, unknown>)
     this.config = {
-      model: opts.model,
-      max_tokens: opts.max_tokens,
-      timeout_ms: opts.timeout_ms ?? DEFAULT_TIMEOUT_MS,
-      working_directory: opts.working_directory,
+      model: parsed.model,
+      max_tokens: parsed.max_tokens,
+      timeout_ms: parsed.timeout_ms ?? DEFAULT_TIMEOUT_MS,
+      working_directory: parsed.working_directory,
     }
   }
 
@@ -64,70 +73,55 @@ export class ClaudeCodeExecutor implements Executor {
 
     try {
       await writeFile(tempFile, prompt, 'utf8')
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      return this._errorResult(`Failed to write temp file: ${message}`)
-    }
-
-    let stdout = ''
-    let spawnError: Error | null = null
-
-    try {
       const result = await this._runClaude(tempFile)
-      stdout = result.stdout
-      if (result.spawnError) {
-        spawnError = result.spawnError
-      }
-    } finally {
-      await unlink(tempFile).catch(() => {
-        // ignore cleanup errors
-      })
-    }
 
-    if (spawnError) {
-      const isNotFound =
-        (spawnError as NodeJS.ErrnoException).code === 'ENOENT'
-      if (isNotFound) {
+      if (result.enoent) {
         return this._errorResult(
           'claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code',
         )
       }
-      return this._errorResult(spawnError.message)
-    }
+      if (result.spawnError) {
+        return this._errorResult(result.spawnError.message)
+      }
 
-    const parsed = parseLastLine(stdout)
-    if (!parsed) {
+      const stdout = result.stdout
+      const parsed = parseLastLine(stdout)
+
+      if (!parsed) {
+        return {
+          task_id: context.task_id,
+          status: 'failed',
+          summary: 'Could not parse executor result from output',
+          files_changed: [],
+          tests_added: [],
+          tests_run: [],
+          acceptance_criteria_status: [],
+          issues: [],
+          merge_recommendation: 'revise',
+          output: stdout,
+        } as ExecutorResult & { output: string }
+      }
+
       return {
-        task_id: context.task_id,
-        status: 'failed',
-        summary: 'Could not parse executor result from output',
-        files_changed: [],
-        tests_added: [],
-        tests_run: [],
-        acceptance_criteria_status: [],
-        issues: [],
-        merge_recommendation: 'revise',
-        output: stdout,
-      } as ExecutorResult & { output: string }
-    }
-
-    return {
-      task_id: (parsed['task_id'] as string | undefined) ?? context.task_id,
-      status:
-        (parsed['status'] as ExecutorResult['status'] | undefined) ?? 'failed',
-      summary: (parsed['summary'] as string | undefined) ?? '',
-      files_changed:
-        (parsed['files_changed'] as ExecutorResult['files_changed'] | undefined) ?? [],
-      tests_added:
-        (parsed['tests_added'] as string[] | undefined) ?? [],
-      tests_run:
-        (parsed['tests_run'] as ExecutorResult['tests_run'] | undefined) ?? [],
-      acceptance_criteria_status:
-        (parsed['acceptance_criteria_status'] as ExecutorResult['acceptance_criteria_status'] | undefined) ?? [],
-      issues:
-        (parsed['issues'] as string[] | undefined) ?? [],
-      merge_recommendation:
-        (parsed['merge_recommendation'] as ExecutorResult['merge_recommendation'] | undefined) ?? 'revise',
+        task_id: (parsed['task_id'] as string | undefined) ?? context.task_id,
+        status:
+          (parsed['status'] as ExecutorResult['status'] | undefined) ?? 'failed',
+        summary: (parsed['summary'] as string | undefined) ?? '',
+        files_changed:
+          (parsed['files_changed'] as ExecutorResult['files_changed'] | undefined) ?? [],
+        tests_added:
+          (parsed['tests_added'] as string[] | undefined) ?? [],
+        tests_run:
+          (parsed['tests_run'] as ExecutorResult['tests_run'] | undefined) ?? [],
+        acceptance_criteria_status:
+          (parsed['acceptance_criteria_status'] as ExecutorResult['acceptance_criteria_status'] | undefined) ?? [],
+        issues:
+          (parsed['issues'] as string[] | undefined) ?? [],
+        merge_recommendation:
+          (parsed['merge_recommendation'] as ExecutorResult['merge_recommendation'] | undefined) ?? 'revise',
+      }
+    } finally {
+      await unlink(tempFile).catch(() => {})  // ignore if never created
     }
   }
 
@@ -141,7 +135,7 @@ export class ClaudeCodeExecutor implements Executor {
 
   private _runClaude(
     inputFile: string,
-  ): Promise<{ stdout: string; exitCode: number; spawnError: Error | null }> {
+  ): Promise<{ stdout: string; exitCode: number; spawnError: Error | null; enoent: boolean }> {
     return new Promise((resolve) => {
       const args = ['--print', '--input-file', inputFile]
       if (this.config.model) {
@@ -161,10 +155,12 @@ export class ClaudeCodeExecutor implements Executor {
           stdio: ['ignore', 'pipe', 'pipe'],
         })
       } catch (err) {
+        const isEnoent = (err as NodeJS.ErrnoException).code === 'ENOENT'
         resolve({
           stdout: '',
           exitCode: 1,
           spawnError: err instanceof Error ? err : new Error(String(err)),
+          enoent: isEnoent,
         })
         return
       }
@@ -183,18 +179,23 @@ export class ClaudeCodeExecutor implements Executor {
       const timer = setTimeout(() => {
         timedOut = true
         child.kill('SIGTERM')
-        resolve({ stdout, exitCode: 1, spawnError: null })
+        resolve({ stdout, exitCode: 1, spawnError: null, enoent: false })
       }, timeout_ms)
 
-      child.on('error', (err: Error) => {
+      child.on('error', (err: NodeJS.ErrnoException) => {
+        if (timedOut) return  // already resolved by timeout handler
         clearTimeout(timer)
-        resolve({ stdout, exitCode: 1, spawnError: err })
+        if (err.code === 'ENOENT') {
+          resolve({ stdout: '', exitCode: -1, spawnError: err, enoent: true })
+        } else {
+          resolve({ stdout: '', exitCode: -1, spawnError: err, enoent: false })
+        }
       })
 
       child.on('close', (code: number | null) => {
         clearTimeout(timer)
         if (!timedOut) {
-          resolve({ stdout, exitCode: code ?? 1, spawnError: null })
+          resolve({ stdout, exitCode: code ?? 1, spawnError: null, enoent: false })
         }
       })
     })

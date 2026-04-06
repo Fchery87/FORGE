@@ -83,6 +83,7 @@ describe('ClaudeCodeExecutor', () => {
   let executor: ClaudeCodeExecutor
 
   beforeEach(async () => {
+    _triggerChild = () => {}
     _spawnShouldThrow = null
     _lastSpawnArgs = []
     executor = new ClaudeCodeExecutor()
