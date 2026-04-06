@@ -1,6 +1,9 @@
 import { Command } from 'commander'
 import { setupLogger, logger } from './utils/logger.js'
 import { resolveForgeDir } from './utils/cli-args.js'
+import { register as registerInit } from './commands/init.js'
+import { register as registerIntake } from './commands/intake.js'
+import { register as registerStatus } from './commands/status.js'
 
 const program = new Command()
 
@@ -16,13 +19,14 @@ program
     setupLogger({ json: opts.json, verbose: opts.verbose })
   })
 
-// Register commands — each command is a separate module
-// They will be added in Tasks 3.2–3.12
+// Register implemented commands
+registerInit(program)
+registerIntake(program)
+registerStatus(program)
 
-// Placeholder commands — replaced by full implementations
-const commands = ['init', 'intake', 'plan', 'execute', 'merge', 'review', 'qa', 'ship', 'status', 'snapshot', 'restore', 'config']
-
-for (const cmd of commands) {
+// Remaining commands — stubs until implemented
+const pendingCommands = ['plan', 'execute', 'merge', 'review', 'qa', 'ship', 'snapshot', 'restore', 'config']
+for (const cmd of pendingCommands) {
   program
     .command(cmd)
     .description(`forge ${cmd}`)
