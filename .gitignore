@@ -3,3 +3,7 @@ dist/
 *.tsbuildinfo
 .forge/views/
 coverage/
+.env
+.env.*
+.DS_Store
+Thumbs.db
