@@ -8,3 +8,13 @@ export type { GateResult } from './gate-keeper.js'
 export { ContextEngine } from './context-engine.js'
 export { ReviewEngine } from './review-engine.js'
 export type { ChecklistResult } from './review-engine.js'
+export { Orchestrator } from './orchestrator.js'
+export type {
+  ForgeRole,
+  ForgeCommand,
+  RolePermissions,
+  PermissionCheckResult,
+  PreconditionCheckResult,
+  ForgeError,
+} from './orchestrator.js'
+export { COMMAND_ROLES, ROLE_PERMISSIONS, COMMAND_PRECONDITIONS } from './orchestrator.js'
