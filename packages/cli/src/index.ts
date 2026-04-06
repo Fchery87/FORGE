@@ -4,6 +4,9 @@ import { resolveForgeDir } from './utils/cli-args.js'
 import { register as registerInit } from './commands/init.js'
 import { register as registerIntake } from './commands/intake.js'
 import { register as registerStatus } from './commands/status.js'
+import { register as registerPlan } from './commands/plan.js'
+import { register as registerExecute } from './commands/execute.js'
+import { register as registerMerge } from './commands/merge.js'
 
 const program = new Command()
 
@@ -23,9 +26,12 @@ program
 registerInit(program)
 registerIntake(program)
 registerStatus(program)
+registerPlan(program)
+registerExecute(program)
+registerMerge(program)
 
 // Remaining commands — stubs until implemented
-const pendingCommands = ['plan', 'execute', 'merge', 'review', 'qa', 'ship', 'snapshot', 'restore', 'config']
+const pendingCommands = ['review', 'qa', 'ship', 'snapshot', 'restore', 'config']
 for (const cmd of pendingCommands) {
   program
     .command(cmd)
