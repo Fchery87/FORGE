@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "declaration": true,
+    "composite": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "references": [
+    { "path": "./packages/types" },
+    { "path": "./packages/core" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/adapter-claude-code" },
+    { "path": "./packages/adapter-opencode" },
+    { "path": "./packages/verifier-test-runner" },
+    { "path": "./packages/verifier-playwright" }
+  ]
+}

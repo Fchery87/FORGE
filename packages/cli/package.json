@@ -1,0 +1,27 @@
+{
+  "name": "@forge-agent/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "forge": "./dist/bin/forge.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "dev": "tsc --build --watch"
+  },
+  "dependencies": {
+    "@forge-agent/core": "*",
+    "@forge-agent/types": "*",
+    "commander": "^12.0.0",
+    "kleur": "^4.1.5"
+  }
+}
