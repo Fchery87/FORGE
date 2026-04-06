@@ -11,9 +11,10 @@
     }
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsup",
     "test": "vitest run",
-    "dev": "tsc --build --watch"
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
     "@forge-agent/types": "*"
