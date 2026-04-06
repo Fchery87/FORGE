@@ -8,6 +8,7 @@ export default defineConfig({
       'packages/cli',
       'packages/verifier-test-runner',
       'packages/adapter-claude-code',
+      'packages/adapter-opencode',
     ],
   },
 })

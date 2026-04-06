@@ -5,6 +5,7 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
+  tsconfig: 'tsconfig.build.json',
   splitting: false,
   target: 'node18',
   external: [
