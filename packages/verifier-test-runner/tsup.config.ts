@@ -7,6 +7,7 @@ export default defineConfig({
   clean: true,
   splitting: false,
   target: 'node18',
+  tsconfig: 'tsconfig.build.json',
   external: [
     '@forge-agent/types',
     '@forge-agent/core',
