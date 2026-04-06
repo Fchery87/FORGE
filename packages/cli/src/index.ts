@@ -7,6 +7,12 @@ import { register as registerStatus } from './commands/status.js'
 import { register as registerPlan } from './commands/plan.js'
 import { register as registerExecute } from './commands/execute.js'
 import { register as registerMerge } from './commands/merge.js'
+import { register as registerReview } from './commands/review.js'
+import { register as registerQa } from './commands/qa.js'
+import { register as registerShip } from './commands/ship.js'
+import { register as registerSnapshot } from './commands/snapshot.js'
+import { register as registerRestore } from './commands/restore.js'
+import { register as registerConfig } from './commands/config.js'
 
 const program = new Command()
 
@@ -22,25 +28,19 @@ program
     setupLogger({ json: opts.json, verbose: opts.verbose })
   })
 
-// Register implemented commands
+// Register all commands
 registerInit(program)
 registerIntake(program)
 registerStatus(program)
 registerPlan(program)
 registerExecute(program)
 registerMerge(program)
-
-// Remaining commands — stubs until implemented
-const pendingCommands = ['review', 'qa', 'ship', 'snapshot', 'restore', 'config']
-for (const cmd of pendingCommands) {
-  program
-    .command(cmd)
-    .description(`forge ${cmd}`)
-    .action(() => {
-      logger.warn(`Command '${cmd}' not yet implemented`)
-      process.exit(1)
-    })
-}
+registerReview(program)
+registerQa(program)
+registerShip(program)
+registerSnapshot(program)
+registerRestore(program)
+registerConfig(program)
 
 // Unknown command handler
 program.on('command:*', (operands: string[]) => {

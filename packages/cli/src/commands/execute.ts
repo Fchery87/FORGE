@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-agent/core'
+import type { Task } from '@forge-agent/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
@@ -38,7 +39,7 @@ export function register(program: Command): void {
       const ctxEngine = new ContextEngine(sm, gen, forgeDir)
 
       // Determine which task(s) to execute
-      let tasksToExecute = []
+      let tasksToExecute: Task[] = []
       if (options.task) {
         const task = await engine.getTask(options.task).catch(() => null)
         if (!task) {
