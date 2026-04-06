@@ -41,6 +41,56 @@ function parseLastLine(stdout: string): Record<string, unknown> | null {
   return null
 }
 
+function isValidStatus(v: unknown): v is ExecutorResult['status'] {
+  return v === 'completed' || v === 'failed' || v === 'partial'
+}
+
+function isValidMergeRecommendation(v: unknown): v is ExecutorResult['merge_recommendation'] {
+  return v === 'merge' || v === 'revise' || v === 'reject'
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every(item => typeof item === 'string')
+}
+
+function isFileChangeArray(v: unknown): v is ExecutorResult['files_changed'] {
+  if (!Array.isArray(v)) return false
+  return v.every(
+    item =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof (item as Record<string, unknown>)['path'] === 'string' &&
+      ((item as Record<string, unknown>)['operation'] === 'added' ||
+        (item as Record<string, unknown>)['operation'] === 'modified' ||
+        (item as Record<string, unknown>)['operation'] === 'deleted'),
+  )
+}
+
+function isTestRunResultArray(v: unknown): v is ExecutorResult['tests_run'] {
+  if (!Array.isArray(v)) return false
+  return v.every(
+    item =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof (item as Record<string, unknown>)['test_file'] === 'string' &&
+      typeof (item as Record<string, unknown>)['passed'] === 'number' &&
+      typeof (item as Record<string, unknown>)['failed'] === 'number' &&
+      typeof (item as Record<string, unknown>)['skipped'] === 'number' &&
+      typeof (item as Record<string, unknown>)['duration_ms'] === 'number',
+  )
+}
+
+function isCriterionStatusArray(v: unknown): v is ExecutorResult['acceptance_criteria_status'] {
+  if (!Array.isArray(v)) return false
+  return v.every(
+    item =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof (item as Record<string, unknown>)['criterion_id'] === 'string' &&
+      typeof (item as Record<string, unknown>)['passed'] === 'boolean',
+  )
+}
+
 function parseConfig(options: Record<string, unknown>): OpenCodeConfig {
   const cfg: OpenCodeConfig = {}
   if (typeof options['timeout_ms'] === 'number') cfg.timeout_ms = options['timeout_ms']
@@ -97,22 +147,15 @@ export class OpenCodeExecutor implements Executor {
       }
 
       return {
-        task_id: (parsed['task_id'] as string | undefined) ?? context.task_id,
-        status:
-          (parsed['status'] as ExecutorResult['status'] | undefined) ?? 'failed',
-        summary: (parsed['summary'] as string | undefined) ?? '',
-        files_changed:
-          (parsed['files_changed'] as ExecutorResult['files_changed'] | undefined) ?? [],
-        tests_added:
-          (parsed['tests_added'] as string[] | undefined) ?? [],
-        tests_run:
-          (parsed['tests_run'] as ExecutorResult['tests_run'] | undefined) ?? [],
-        acceptance_criteria_status:
-          (parsed['acceptance_criteria_status'] as ExecutorResult['acceptance_criteria_status'] | undefined) ?? [],
-        issues:
-          (parsed['issues'] as string[] | undefined) ?? [],
-        merge_recommendation:
-          (parsed['merge_recommendation'] as ExecutorResult['merge_recommendation'] | undefined) ?? 'revise',
+        task_id: typeof parsed['task_id'] === 'string' ? parsed['task_id'] : context.task_id,
+        status: isValidStatus(parsed['status']) ? parsed['status'] : 'failed',
+        summary: typeof parsed['summary'] === 'string' ? parsed['summary'] : '',
+        files_changed: isFileChangeArray(parsed['files_changed']) ? parsed['files_changed'] : [],
+        tests_added: isStringArray(parsed['tests_added']) ? parsed['tests_added'] : [],
+        tests_run: isTestRunResultArray(parsed['tests_run']) ? parsed['tests_run'] : [],
+        acceptance_criteria_status: isCriterionStatusArray(parsed['acceptance_criteria_status']) ? parsed['acceptance_criteria_status'] : [],
+        issues: isStringArray(parsed['issues']) ? parsed['issues'] : [],
+        merge_recommendation: isValidMergeRecommendation(parsed['merge_recommendation']) ? parsed['merge_recommendation'] : 'revise',
       }
     } finally {
       await unlink(tempFile).catch(() => {})  // ignore if never created
