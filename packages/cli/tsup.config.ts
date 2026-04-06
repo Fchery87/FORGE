@@ -6,7 +6,13 @@ export default defineConfig({
     'bin/forge': 'bin/forge.ts',
   },
   format: ['esm'],
-  dts: true,
+  dts: {
+    resolve: true,
+    compilerOptions: {
+      composite: false,
+    },
+  },
+  tsconfig: 'tsconfig.build.json',
   clean: true,
   splitting: false,
   target: 'node18',
