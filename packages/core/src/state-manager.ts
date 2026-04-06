@@ -207,7 +207,14 @@ export class StateManager {
   private async readJson<T>(filePath: string, defaultValue: T): Promise<T> {
     if (!existsSync(filePath)) return defaultValue
     const content = await readFile(filePath, 'utf-8')
-    return JSON.parse(content) as T
+    try {
+      return JSON.parse(content) as T
+    } catch (err) {
+      throw new Error(
+        `Corrupt state file at ${filePath}: ${err instanceof Error ? err.message : String(err)}\n` +
+        `Delete the file and re-run \`forge init\` to reset.`
+      )
+    }
   }
 
   private async writeJson(filePath: string, data: unknown): Promise<void> {
