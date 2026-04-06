@@ -7,7 +7,9 @@ export default defineConfig({
   clean: true,
   splitting: false,
   target: 'node18',
+  tsconfig: 'tsconfig.build.json',
   external: [
+    'playwright',
     '@forge-agent/types',
     '@forge-agent/core',
     '@forge-agent/cli',

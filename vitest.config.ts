@@ -9,6 +9,7 @@ export default defineConfig({
       'packages/verifier-test-runner',
       'packages/adapter-claude-code',
       'packages/adapter-opencode',
+      'packages/verifier-playwright',
     ],
   },
 })
