@@ -1,3 +1,5 @@
 export { StateManager } from './state-manager.js'
 export { IdGenerator } from './id-generator.js'
 export type { IdPrefix } from './id-generator.js'
+export { TaskEngine, TaskTransitionError, TaskNotFoundError } from './task-engine.js'
+export type { CreateTaskInput } from './task-engine.js'
