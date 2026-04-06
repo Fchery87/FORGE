@@ -5,3 +5,4 @@ export { TaskEngine, TaskTransitionError, TaskNotFoundError } from './task-engin
 export type { CreateTaskInput } from './task-engine.js'
 export { GateKeeper } from './gate-keeper.js'
 export type { GateResult } from './gate-keeper.js'
+export { ContextEngine } from './context-engine.js'
