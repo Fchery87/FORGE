@@ -57,6 +57,38 @@ export function register(program: Command): void {
       // Create the review
       const review = await reviewEngine.createReview(reviewType, taskIds)
 
+      // Update project status to reviewing for arch review (always, before any early returns)
+      if (reviewType === 'architecture') {
+        await sm.updateProject({ current_status: 'reviewing' })
+      }
+
+      if (options.passAll) {
+        // Auto-pass all items (for testing/scripted use)
+        const results = review.checklist.map((_, idx) => ({ item_index: idx, passed: true }))
+        const evaluated = await reviewEngine.evaluateChecklist(review.review_id, results)
+
+        // Transition tasks to qa_pending if implementation review
+        if (reviewType === 'implementation') {
+          for (const taskId of taskIds) {
+            const task = await taskEngine.getTask(taskId).catch(() => null)
+            if (task?.status === 'in_review') {
+              await taskEngine.transition(taskId, 'qa_pending')
+            }
+          }
+        }
+
+        if (opts.json) {
+          process.stdout.write(JSON.stringify({ review: evaluated }, null, 2) + '\n')
+          return
+        }
+
+        logger.success(`Review ${review.review_id}: ${kleur.bold('APPROVED')}`)
+        for (const taskId of taskIds) {
+          logger.log(`  Task ${taskId} → qa_pending`)
+        }
+        return
+      }
+
       if (opts.json) {
         process.stdout.write(JSON.stringify({ review }, null, 2) + '\n')
         return
@@ -79,38 +111,10 @@ export function register(program: Command): void {
       })
       logger.log('')
 
-      if (options.passAll) {
-        // Auto-pass all items (for testing/scripted use)
-        const results = review.checklist.map((_, idx) => ({ item_index: idx, passed: true }))
-        const evaluated = await reviewEngine.evaluateChecklist(review.review_id, results)
-
-        logger.success(`Review ${review.review_id}: ${kleur.bold('APPROVED')}`)
-
-        // Transition tasks to qa_pending if implementation review
-        if (reviewType === 'implementation') {
-          for (const taskId of taskIds) {
-            const task = await taskEngine.getTask(taskId).catch(() => null)
-            if (task?.status === 'in_review') {
-              await taskEngine.transition(taskId, 'qa_pending')
-              logger.log(`  Task ${taskId} → qa_pending`)
-            }
-          }
-        }
-
-        if (opts.json) {
-          process.stdout.write(JSON.stringify({ review: evaluated }, null, 2) + '\n')
-        }
-      } else {
-        logger.log(kleur.yellow('Review artifact created.'))
-        logger.log(`Review ID: ${kleur.bold(review.review_id)}`)
-        logger.log('')
-        logger.log('To evaluate this review interactively, use your AI agent with the checklist above.')
-        logger.log(`Or use --pass-all to approve all items (for scripted use).`)
-      }
-
-      // Update project status to reviewing if arch review
-      if (reviewType === 'architecture') {
-        await sm.updateProject({ current_status: 'reviewing' })
-      }
+      logger.log(kleur.yellow('Review artifact created.'))
+      logger.log(`Review ID: ${kleur.bold(review.review_id)}`)
+      logger.log('')
+      logger.log('To evaluate this review interactively, use your AI agent with the checklist above.')
+      logger.log(`Or use --pass-all to approve all items (for scripted use).`)
     })
 }
