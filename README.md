@@ -159,7 +159,7 @@ CLI Command
 
 ### Prerequisites
 
-- Node.js 18 or later
+- Node.js 20 or later
 - npm 9 or later
 - An AI coding agent CLI (see [Executor Adapters](#executor-adapters))
 
@@ -862,10 +862,10 @@ forge/
 
 ### Technical stack
 
-- **TypeScript** — strict mode, ESM, NodeNext module resolution
-- **tsup** — ESM build with DTS generation per package
-- **vitest** — testing with workspace configuration
-- **commander.js** — CLI argument parsing
+- **TypeScript 6** — strict mode, ESM, NodeNext module resolution
+- **tsup 8** — ESM build with DTS generation per package
+- **vitest 4** — testing with workspace configuration
+- **commander 14** — CLI argument parsing
 - **kleur** — terminal colors (no stack traces in user-facing errors)
 
 ---
