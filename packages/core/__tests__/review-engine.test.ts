@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { StateManager, IdGenerator, ReviewEngine } from '../src/index.js'
-import { REVIEW_CHECKLISTS } from '@forge-agent/types'
+import { REVIEW_CHECKLISTS } from '@forge-core/types'
 
 let forgeDir: string
 let sm: StateManager

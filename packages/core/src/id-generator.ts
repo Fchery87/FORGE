@@ -1,5 +1,5 @@
 import type { StateManager } from './state-manager.js'
-import type { ForgeConfig } from '@forge-agent/types'
+import type { ForgeConfig } from '@forge-core/types'
 
 export type IdPrefix = 'TASK' | 'DEC' | 'REV' | 'QA' | 'SNAP'
 

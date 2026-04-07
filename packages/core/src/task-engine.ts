@@ -1,5 +1,5 @@
-import type { Task, TaskStatus } from '@forge-agent/types'
-import { TASK_TRANSITIONS } from '@forge-agent/types'
+import type { Task, TaskStatus } from '@forge-core/types'
+import { TASK_TRANSITIONS } from '@forge-core/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
 

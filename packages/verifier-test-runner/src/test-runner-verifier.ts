@@ -7,7 +7,7 @@ import type {
   VerificationType,
   CheckResult,
   Issue,
-} from '@forge-agent/types'
+} from '@forge-core/types'
 
 export interface TestRunnerConfig {
   command: string

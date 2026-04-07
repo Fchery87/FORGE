@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import type { VerificationPlan } from '@forge-agent/types'
+import type { VerificationPlan } from '@forge-core/types'
 
 // ---------------------------------------------------------------------------
 // Mock node:fs/promises so tests never touch the filesystem

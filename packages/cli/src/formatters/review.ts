@@ -1,5 +1,5 @@
 import kleur from 'kleur'
-import type { ReviewArtifact } from '@forge-agent/types'
+import type { ReviewArtifact } from '@forge-core/types'
 
 export function formatReview(review: ReviewArtifact): string {
   const verdictColor = {

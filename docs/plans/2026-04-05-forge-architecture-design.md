@@ -34,19 +34,19 @@ The result is a framework where planning, execution, review, and QA are structur
 ### 3.1 Three-Layer Model
 
 ```
-Layer 3: Adapters        @forge-agent/adapter-claude-code
-                         @forge-agent/adapter-opencode
-                         @forge-agent/verifier-playwright
-                         @forge-agent/verifier-test-runner
+Layer 3: Adapters        @forge-core/adapter-claude-code
+                         @forge-core/adapter-opencode
+                         @forge-core/verifier-playwright
+                         @forge-core/verifier-test-runner
 
-Layer 2: Interfaces      @forge-agent/types
+Layer 2: Interfaces      @forge-core/types
                          (Executor, Verifier, all data schemas)
 
-Layer 1: Core Engine     @forge-agent/core
+Layer 1: Core Engine     @forge-core/core
                          (Orchestrator, StateManager, TaskEngine,
                           ContextEngine, ReviewEngine, GateKeeper)
 
-CLI Surface:             @forge-agent/cli
+CLI Surface:             @forge-core/cli
                          (Commands, formatters, terminal output)
 ```
 
@@ -497,13 +497,13 @@ The `execute -> merge` loop repeats per task. `--wave` mode dispatches independe
 
 ### 7.1 Built-in Verifiers
 
-**TestRunnerVerifier** (`@forge-agent/verifier-test-runner`)
+**TestRunnerVerifier** (`@forge-core/verifier-test-runner`)
 - Executes configured test command
 - Parses output for pass/fail/skip counts
 - Maps test files to tasks via `files_in_scope`
 - Returns structured CheckResult array
 
-**PlaywrightVerifier** (`@forge-agent/verifier-playwright`) - optional
+**PlaywrightVerifier** (`@forge-core/verifier-playwright`) - optional
 - Manages persistent browser lifecycle
 - Reusable session/auth state via stored cookies
 - Screenshots on assertion and on failure
@@ -573,7 +573,7 @@ forge/
   package.json                   # Workspace root
   tsconfig.json
   packages/
-    types/                       # @forge-agent/types
+    types/                       # @forge-core/types
       src/
         index.ts
         state.ts
@@ -584,7 +584,7 @@ forge/
         executor.ts
         verifier.ts
         config.ts
-    core/                        # @forge-agent/core
+    core/                        # @forge-core/core
       src/
         index.ts
         orchestrator.ts
@@ -595,7 +595,7 @@ forge/
         gate-keeper.ts
         id-generator.ts
       __tests__/
-    cli/                         # @forge-agent/cli
+    cli/                         # @forge-core/cli
       src/
         index.ts
         commands/
@@ -620,19 +620,19 @@ forge/
           cli-args.ts
       bin/
         forge.ts
-    adapter-claude-code/         # @forge-agent/adapter-claude-code
+    adapter-claude-code/         # @forge-core/adapter-claude-code
       src/
         executor.ts
         installer.ts
         templates/
-    adapter-opencode/            # @forge-agent/adapter-opencode
+    adapter-opencode/            # @forge-core/adapter-opencode
       src/
         executor.ts
         installer.ts
-    verifier-test-runner/        # @forge-agent/verifier-test-runner
+    verifier-test-runner/        # @forge-core/verifier-test-runner
       src/
         index.ts
-    verifier-playwright/         # @forge-agent/verifier-playwright
+    verifier-playwright/         # @forge-core/verifier-playwright
       src/
         index.ts
         browser-manager.ts

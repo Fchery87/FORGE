@@ -1,4 +1,4 @@
-import type { Task, ReviewArtifact, VerificationResult } from '@forge-agent/types'
+import type { Task, ReviewArtifact, VerificationResult } from '@forge-core/types'
 
 export interface GateResult {
   allowed: boolean

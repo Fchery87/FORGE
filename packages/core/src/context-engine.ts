@@ -7,7 +7,7 @@ import type {
   Snapshot,
   SnapshotData,
   OwnerRole,
-} from '@forge-agent/types'
+} from '@forge-core/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
 

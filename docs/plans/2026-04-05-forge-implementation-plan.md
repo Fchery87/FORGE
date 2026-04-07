@@ -26,14 +26,14 @@
 
 ---
 
-## Phase 1: Type Definitions (`@forge-agent/types`)
+## Phase 1: Type Definitions (`@forge-core/types`)
 
 ### Task 1.1: State types
 - Implement `state.ts`: `ProjectState`, `ArchitectureState`, `ExecutionState`, `ContextState`
 - Implement supporting types: `Decision`, `Risk`, `Dependency`, `Phase`
 - Export all from `index.ts`
 
-**Acceptance**: Types compile. Import from `@forge-agent/types` resolves.
+**Acceptance**: Types compile. Import from `@forge-core/types` resolves.
 
 ### Task 1.2: Task types
 - Implement `task.ts`: `Task`, `TaskStatus`, `AcceptanceCriterion`, `TestRequirement`, `Evidence`
@@ -57,7 +57,7 @@
 
 ---
 
-## Phase 2: Core Engine (`@forge-agent/core`)
+## Phase 2: Core Engine (`@forge-core/core`)
 
 ### Task 2.1: StateManager
 - Implement JSON file read/write for all state files
@@ -166,7 +166,7 @@
 
 ---
 
-## Phase 3: CLI (`@forge-agent/cli`)
+## Phase 3: CLI (`@forge-core/cli`)
 
 ### Task 3.1: CLI framework and entry point
 - Set up command parsing (use `commander` or `citty`)
@@ -289,7 +289,7 @@
 
 ## Phase 4: Adapters
 
-### Task 4.1: Test Runner Verifier (`@forge-agent/verifier-test-runner`)
+### Task 4.1: Test Runner Verifier (`@forge-core/verifier-test-runner`)
 - Implement `Verifier` interface
 - Execute configured test command via child process
 - Parse stdout/stderr for test results (support common formats: TAP, Jest, Vitest)
@@ -298,7 +298,7 @@
 
 **Acceptance**: Running against a project with tests produces valid `VerificationResult`.
 
-### Task 4.2: Claude Code Adapter (`@forge-agent/adapter-claude-code`)
+### Task 4.2: Claude Code Adapter (`@forge-core/adapter-claude-code`)
 - Implement `Executor` interface
 - Generate prompt from `TaskContext` (task definition + context pack as structured prompt)
 - Execute via `claude` CLI subprocess with `--print` flag
@@ -308,7 +308,7 @@
 
 **Acceptance**: `forge install claude-code` copies templates. Executor dispatches task and returns structured result.
 
-### Task 4.3: OpenCode Adapter (`@forge-agent/adapter-opencode`)
+### Task 4.3: OpenCode Adapter (`@forge-core/adapter-opencode`)
 - Same pattern as Claude Code adapter
 - Execute via `opencode` CLI
 - Adapter-specific prompt formatting
@@ -316,7 +316,7 @@
 
 **Acceptance**: Executor dispatches and returns structured result.
 
-### Task 4.4: Playwright Verifier (`@forge-agent/verifier-playwright`)
+### Task 4.4: Playwright Verifier (`@forge-core/verifier-playwright`)
 - Implement `Verifier` interface
 - Browser lifecycle management: launch, reuse, dispose
 - Session persistence: save/load cookies and storage state

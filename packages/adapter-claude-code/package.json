@@ -1,5 +1,5 @@
 {
-  "name": "@forge-agent/adapter-claude-code",
+  "name": "@forge-core/adapter-claude-code",
   "version": "0.1.0",
   "description": "Claude Code executor adapter for the Forge AI coding agent",
   "keywords": [
@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/types": "^0.1.0"
+    "@forge-core/types": "^0.1.0"
   },
   "publishConfig": {
     "access": "public"

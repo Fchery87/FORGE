@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
-import { StateManager } from '@forge-agent/core'
+import { StateManager } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 

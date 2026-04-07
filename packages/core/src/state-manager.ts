@@ -9,8 +9,8 @@ import type {
   ContextState,
   Task,
   Decision,
-} from '@forge-agent/types'
-import { DEFAULT_CONFIG } from '@forge-agent/types'
+} from '@forge-core/types'
+import { DEFAULT_CONFIG } from '@forge-core/types'
 
 export class StateManager {
   private readonly forgeDir: string

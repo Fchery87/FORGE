@@ -1,5 +1,5 @@
 {
-  "name": "@forge-agent/cli",
+  "name": "@forge-core/cli",
   "version": "0.1.0",
   "description": "Command-line interface for the Forge AI coding agent",
   "keywords": [
@@ -38,8 +38,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/core": "^0.1.0",
-    "@forge-agent/types": "^0.1.0",
+    "@forge-core/core": "^0.1.0",
+    "@forge-core/types": "^0.1.0",
     "commander": "^14.0.3",
     "kleur": "^4.1.5"
   },

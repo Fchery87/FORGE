@@ -2,8 +2,8 @@ import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, TaskEngine, ContextEngine, Orchestrator
-} from '@forge-agent/core'
-import type { Task } from '@forge-agent/types'
+} from '@forge-core/core'
+import type { Task } from '@forge-core/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'

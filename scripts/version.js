@@ -34,7 +34,7 @@ for (const pkg of packages) {
   for (const field of ['dependencies', 'peerDependencies']) {
     if (!json[field]) continue
     for (const [name, _v] of Object.entries(json[field])) {
-      if (name.startsWith('@forge-agent/')) {
+      if (name.startsWith('@forge-core/')) {
         json[field][name] = `^${version}`
       }
     }

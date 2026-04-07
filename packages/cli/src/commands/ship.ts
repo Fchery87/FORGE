@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, ReviewEngine, ContextEngine, Orchestrator
-} from '@forge-agent/core'
+} from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'

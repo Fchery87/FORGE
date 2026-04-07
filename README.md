@@ -95,21 +95,21 @@ Forge is a TypeScript ESM monorepo with seven packages arranged in three layers:
 
 ```
 Layer 3: Adapters (plug-in executors and verifiers)
-  @forge-agent/adapter-claude-code   — dispatches work to the claude CLI
-  @forge-agent/adapter-opencode      — dispatches work to the opencode CLI
-  @forge-agent/verifier-test-runner  — runs shell test commands
-  @forge-agent/verifier-playwright   — browser-based QA via Playwright
+  @forge-core/adapter-claude-code   — dispatches work to the claude CLI
+  @forge-core/adapter-opencode      — dispatches work to the opencode CLI
+  @forge-core/verifier-test-runner  — runs shell test commands
+  @forge-core/verifier-playwright   — browser-based QA via Playwright
 
 Layer 2: Contracts (shared TypeScript interfaces)
-  @forge-agent/types                 — all data schemas and plugin interfaces
+  @forge-core/types                 — all data schemas and plugin interfaces
 
 Layer 1: Core Engine (business logic, no I/O except .forge/ state files)
-  @forge-agent/core                  — Orchestrator, StateManager, TaskEngine,
+  @forge-core/core                  — Orchestrator, StateManager, TaskEngine,
                                        ContextEngine, ReviewEngine, GateKeeper,
                                        IdGenerator
 
 CLI Surface
-  @forge-agent/cli                   — 12 commands, terminal formatters, JSON output
+  @forge-core/cli                   — 12 commands, terminal formatters, JSON output
 ```
 
 ### Data Flow
@@ -166,7 +166,7 @@ CLI Command
 ### Install the CLI
 
 ```bash
-npm install -g @forge-agent/cli
+npm install -g @forge-core/cli
 ```
 
 Verify the installation:
@@ -180,10 +180,10 @@ forge --help
 
 ```bash
 # For Claude Code
-npm install -g @forge-agent/adapter-claude-code
+npm install -g @forge-core/adapter-claude-code
 
 # For OpenCode
-npm install -g @forge-agent/adapter-opencode
+npm install -g @forge-core/adapter-opencode
 ```
 
 ---
@@ -482,12 +482,12 @@ interface ExecutorResult {
 }
 ```
 
-### Claude Code (`@forge-agent/adapter-claude-code`)
+### Claude Code (`@forge-core/adapter-claude-code`)
 
 Dispatches work to the `claude` CLI via subprocess.
 
 ```bash
-npm install -g @forge-agent/adapter-claude-code
+npm install -g @forge-core/adapter-claude-code
 forge config adapter.executor claude-code
 ```
 
@@ -514,12 +514,12 @@ forge config adapter.executor claude-code
 }
 ```
 
-### OpenCode (`@forge-agent/adapter-opencode`)
+### OpenCode (`@forge-core/adapter-opencode`)
 
 Dispatches work to the `opencode` CLI via subprocess.
 
 ```bash
-npm install -g @forge-agent/adapter-opencode
+npm install -g @forge-core/adapter-opencode
 forge config adapter.executor opencode
 ```
 
@@ -530,7 +530,7 @@ forge config adapter.executor opencode
 ### Custom Executors
 
 ```typescript
-import type { Executor, ExecutorConfig, TaskContext, ExecutorResult } from '@forge-agent/types'
+import type { Executor, ExecutorConfig, TaskContext, ExecutorResult } from '@forge-core/types'
 
 export class MyExecutor implements Executor {
   readonly name = 'my-executor'
@@ -566,7 +566,7 @@ interface Verifier {
 }
 ```
 
-### Test Runner (`@forge-agent/verifier-test-runner`)
+### Test Runner (`@forge-core/verifier-test-runner`)
 
 Runs a shell test command and parses the output for pass/fail signals.
 
@@ -577,7 +577,7 @@ Configuration in `config.json`:
     "verifiers": [
       {
         "name": "test-runner",
-        "package": "@forge-agent/verifier-test-runner",
+        "package": "@forge-core/verifier-test-runner",
         "options": {
           "command": "npm test",
           "timeout_ms": 60000
@@ -592,7 +592,7 @@ Configuration in `config.json`:
 
 **Evidence:** Full test output is captured as a `test_output` evidence artifact.
 
-### Playwright (`@forge-agent/verifier-playwright`)
+### Playwright (`@forge-core/verifier-playwright`)
 
 Navigates configured routes in a real browser, captures screenshots and console logs, and reports page errors as failed checks.
 
@@ -608,7 +608,7 @@ Configuration:
     "verifiers": [
       {
         "name": "playwright",
-        "package": "@forge-agent/verifier-playwright",
+        "package": "@forge-core/verifier-playwright",
         "options": {
           "base_url": "http://localhost:3000",
           "headless": true,
@@ -633,7 +633,7 @@ Configuration:
 ### Custom Verifiers
 
 ```typescript
-import type { Verifier, VerifierConfig, VerificationPlan, VerificationResult, VerificationType } from '@forge-agent/types'
+import type { Verifier, VerifierConfig, VerificationPlan, VerificationResult, VerificationType } from '@forge-core/types'
 
 export class MyVerifier implements Verifier {
   readonly name = 'my-verifier'
@@ -847,13 +847,13 @@ npm run clean    # removes all dist/, *.tsbuildinfo, compiled test files
 ```
 forge/
   packages/
-    types/               @forge-agent/types
-    core/                @forge-agent/core
-    cli/                 @forge-agent/cli
-    adapter-claude-code/ @forge-agent/adapter-claude-code
-    adapter-opencode/    @forge-agent/adapter-opencode
-    verifier-test-runner/@forge-agent/verifier-test-runner
-    verifier-playwright/ @forge-agent/verifier-playwright
+    types/               @forge-core/types
+    core/                @forge-core/core
+    cli/                 @forge-core/cli
+    adapter-claude-code/ @forge-core/adapter-claude-code
+    adapter-opencode/    @forge-core/adapter-opencode
+    verifier-test-runner/@forge-core/verifier-test-runner
+    verifier-playwright/ @forge-core/verifier-playwright
   docs/
     plans/               architecture design and implementation plan
   .forge/                created at runtime (gitignored)
@@ -874,13 +874,13 @@ forge/
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| `@forge-agent/types` | 0.1.0 | Shared TypeScript interfaces and type definitions |
-| `@forge-agent/core` | 0.1.0 | Core engine: state, tasks, context, reviews, gates |
-| `@forge-agent/cli` | 0.1.0 | CLI entry point with 12 commands |
-| `@forge-agent/adapter-claude-code` | 0.1.0 | Executor adapter for the `claude` CLI |
-| `@forge-agent/adapter-opencode` | 0.1.0 | Executor adapter for the `opencode` CLI |
-| `@forge-agent/verifier-test-runner` | 0.1.0 | Verifier: runs shell test commands |
-| `@forge-agent/verifier-playwright` | 0.1.0 | Verifier: browser-based QA via Playwright |
+| `@forge-core/types` | 0.1.0 | Shared TypeScript interfaces and type definitions |
+| `@forge-core/core` | 0.1.0 | Core engine: state, tasks, context, reviews, gates |
+| `@forge-core/cli` | 0.1.0 | CLI entry point with 12 commands |
+| `@forge-core/adapter-claude-code` | 0.1.0 | Executor adapter for the `claude` CLI |
+| `@forge-core/adapter-opencode` | 0.1.0 | Executor adapter for the `opencode` CLI |
+| `@forge-core/verifier-test-runner` | 0.1.0 | Verifier: runs shell test commands |
+| `@forge-core/verifier-playwright` | 0.1.0 | Verifier: browser-based QA via Playwright |
 
 ---
 

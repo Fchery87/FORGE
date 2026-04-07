@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
-import { StateManager, IdGenerator, ContextEngine } from '@forge-agent/core'
+import { StateManager, IdGenerator, ContextEngine } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 

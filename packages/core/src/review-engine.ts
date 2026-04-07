@@ -5,8 +5,8 @@ import type {
   ReviewArtifact,
   ReviewType,
   ChecklistItem,
-} from '@forge-agent/types'
-import { REVIEW_CHECKLISTS } from '@forge-agent/types'
+} from '@forge-core/types'
+import { REVIEW_CHECKLISTS } from '@forge-core/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
 

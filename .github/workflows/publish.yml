@@ -35,38 +35,38 @@ jobs:
         run: npm test
 
       # Publish in dependency order so downstream packages can resolve
-      # @forge-agent/types before @forge-agent/core, etc.
-      - name: Publish @forge-agent/types
+      # @forge-core/types before @forge-core/core, etc.
+      - name: Publish @forge-core/types
         run: npm publish --workspace=packages/types --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/core
+      - name: Publish @forge-core/core
         run: npm publish --workspace=packages/core --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/cli
+      - name: Publish @forge-core/cli
         run: npm publish --workspace=packages/cli --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/adapter-claude-code
+      - name: Publish @forge-core/adapter-claude-code
         run: npm publish --workspace=packages/adapter-claude-code --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/adapter-opencode
+      - name: Publish @forge-core/adapter-opencode
         run: npm publish --workspace=packages/adapter-opencode --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/verifier-test-runner
+      - name: Publish @forge-core/verifier-test-runner
         run: npm publish --workspace=packages/verifier-test-runner --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @forge-agent/verifier-playwright
+      - name: Publish @forge-core/verifier-playwright
         run: npm publish --workspace=packages/verifier-playwright --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

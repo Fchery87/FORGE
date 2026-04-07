@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { formatStatus, progressBar } from '../src/formatters/status.js'
 import { formatTask, formatTaskList } from '../src/formatters/task.js'
 import { formatReview } from '../src/formatters/review.js'
-import type { ProjectState, ExecutionState, ContextState, Task, ReviewArtifact } from '@forge-agent/types'
+import type { ProjectState, ExecutionState, ContextState, Task, ReviewArtifact } from '@forge-core/types'
 
 const mockProject: ProjectState = {
   name: 'test-project',

@@ -37,7 +37,7 @@ vi.mock('node:child_process', () => {
 })
 
 import { TestRunnerVerifier } from '../src/test-runner-verifier.js'
-import type { VerificationPlan } from '@forge-agent/types'
+import type { VerificationPlan } from '@forge-core/types'
 
 // ---------------------------------------------------------------------------
 // Helpers

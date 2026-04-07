@@ -1,5 +1,5 @@
 {
-  "name": "@forge-agent/types",
+  "name": "@forge-core/types",
   "version": "0.1.0",
   "description": "Shared TypeScript types for the Forge AI coding agent",
   "keywords": [

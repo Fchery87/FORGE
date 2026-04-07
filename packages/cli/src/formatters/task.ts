@@ -1,5 +1,5 @@
 import kleur from 'kleur'
-import type { Task, TaskStatus } from '@forge-agent/types'
+import type { Task, TaskStatus } from '@forge-core/types'
 
 export function formatTask(task: Task, verbose = false): string {
   const lines: string[] = [

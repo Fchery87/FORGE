@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GateKeeper } from '../src/index.js'
-import type { Task, ReviewArtifact, VerificationResult } from '@forge-agent/types'
+import type { Task, ReviewArtifact, VerificationResult } from '@forge-core/types'
 
 const gk = new GateKeeper()
 

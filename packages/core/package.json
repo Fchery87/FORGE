@@ -1,5 +1,5 @@
 {
-  "name": "@forge-agent/core",
+  "name": "@forge-core/core",
   "version": "0.1.0",
   "description": "Core orchestration engine for the Forge AI coding agent",
   "keywords": [
@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/types": "^0.1.0"
+    "@forge-core/types": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "*"

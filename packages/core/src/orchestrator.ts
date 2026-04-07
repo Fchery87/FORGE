@@ -1,4 +1,4 @@
-import type { TaskStatus } from '@forge-agent/types'
+import type { TaskStatus } from '@forge-core/types'
 
 // Role definitions
 export type ForgeRole = 'builder' | 'manager' | 'executive'

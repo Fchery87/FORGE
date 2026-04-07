@@ -1,5 +1,5 @@
 import kleur from 'kleur'
-import type { ProjectState, ExecutionState, ContextState } from '@forge-agent/types'
+import type { ProjectState, ExecutionState, ContextState } from '@forge-core/types'
 
 export interface StatusData {
   project: ProjectState

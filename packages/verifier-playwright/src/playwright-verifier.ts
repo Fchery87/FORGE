@@ -9,7 +9,7 @@ import type {
   CheckResult,
   EvidenceArtifact,
   Issue,
-} from '@forge-agent/types'
+} from '@forge-core/types'
 
 // ---------------------------------------------------------------------------
 // Config types

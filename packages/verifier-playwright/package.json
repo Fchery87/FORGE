@@ -1,5 +1,5 @@
 {
-  "name": "@forge-agent/verifier-playwright",
+  "name": "@forge-core/verifier-playwright",
   "version": "0.1.0",
   "description": "Playwright browser verifier plugin for the Forge AI coding agent",
   "keywords": [
@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/types": "^0.1.0"
+    "@forge-core/types": "^0.1.0"
   },
   "peerDependencies": {
     "playwright": ">=1.50.0"

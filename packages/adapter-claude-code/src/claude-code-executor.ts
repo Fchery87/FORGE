@@ -8,7 +8,7 @@ import type {
   ExecutorConfig,
   TaskContext,
   ExecutorResult,
-} from '@forge-agent/types'
+} from '@forge-core/types'
 
 export interface ClaudeCodeConfig {
   model?: string
