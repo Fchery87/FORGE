@@ -2,7 +2,11 @@
   "name": "@forge-agent/verifier-playwright",
   "version": "0.1.0",
   "description": "Playwright browser verifier plugin for the Forge AI coding agent",
-  "keywords": ["forge", "ai", "coding-agent"],
+  "keywords": [
+    "forge",
+    "ai",
+    "coding-agent"
+  ],
   "author": "Forge",
   "license": "MIT",
   "repository": {
@@ -18,7 +22,10 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
@@ -27,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/types": "*"
+    "@forge-agent/types": "^0.1.0"
   },
   "peerDependencies": {
     "playwright": ">=1.40.0"
@@ -36,5 +43,8 @@
     "playwright": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -2,7 +2,11 @@
   "name": "@forge-agent/cli",
   "version": "0.1.0",
   "description": "Command-line interface for the Forge AI coding agent",
-  "keywords": ["forge", "ai", "coding-agent"],
+  "keywords": [
+    "forge",
+    "ai",
+    "coding-agent"
+  ],
   "author": "Forge",
   "license": "MIT",
   "repository": {
@@ -21,7 +25,10 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "postbuild": "chmod +x dist/bin/forge.js || true",
@@ -31,12 +38,15 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@forge-agent/core": "*",
-    "@forge-agent/types": "*",
+    "@forge-agent/core": "^0.1.0",
+    "@forge-agent/types": "^0.1.0",
     "commander": "^12.0.0",
     "kleur": "^4.1.5"
   },
   "devDependencies": {
     "@types/node": "*"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,0 +1,72 @@
+name: Publish to npm
+
+# Triggers when you push a git tag like v0.1.0, v1.2.3, etc.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish:
+    name: Publish packages
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write   # Required for npm provenance attestation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      # Publish in dependency order so downstream packages can resolve
+      # @forge-agent/types before @forge-agent/core, etc.
+      - name: Publish @forge-agent/types
+        run: npm publish --workspace=packages/types --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/core
+        run: npm publish --workspace=packages/core --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/cli
+        run: npm publish --workspace=packages/cli --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/adapter-claude-code
+        run: npm publish --workspace=packages/adapter-claude-code --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/adapter-opencode
+        run: npm publish --workspace=packages/adapter-opencode --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/verifier-test-runner
+        run: npm publish --workspace=packages/verifier-test-runner --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @forge-agent/verifier-playwright
+        run: npm publish --workspace=packages/verifier-playwright --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

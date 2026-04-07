@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "lint": "tsc --build --noEmit",
     "dev": "tsc --build --watch",
-    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache && find packages -path '*/__tests__/*.js' -delete && find packages -path '*/__tests__/*.d.ts' -delete"
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules/.cache && find packages -path '*/__tests__/*.js' -delete && find packages -path '*/__tests__/*.d.ts' -delete",
+    "version": "node scripts/version.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
