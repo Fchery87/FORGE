@@ -201,6 +201,7 @@ export class ContextEngine {
       this.stateManager.updateProject(data.project as Parameters<StateManager['updateProject']>[0]),
       this.stateManager.updateArchitecture(data.architecture as Parameters<StateManager['updateArchitecture']>[0]),
       this.stateManager.updateExecution(data.execution as Parameters<StateManager['updateExecution']>[0]),
+      this.stateManager.updateContext(data.context as Parameters<StateManager['updateContext']>[0]),
     ])
 
     // Restore tasks
@@ -365,7 +366,7 @@ export class ContextEngine {
     for (const status of statusOrder) {
       const group = byStatus[status]
       if (!group || group.length === 0) continue
-      lines.push(`## ${status.replace('_', ' ').toUpperCase()} (${group.length})`)
+      lines.push(`## ${status.replace(/_/g, ' ').toUpperCase()} (${group.length})`)
       for (const t of group) {
         lines.push(`- **${t.task_id}**: ${t.title}`)
       }

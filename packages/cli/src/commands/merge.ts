@@ -82,16 +82,19 @@ export function register(program: Command): void {
         }
       }
 
-      // Transition task to in_review
-      if (task.status === 'in_progress') {
+      // Transition task to in_review (only if currently in_progress)
+      const wasInProgress = task.status === 'in_progress'
+      if (wasInProgress) {
         await engine.transition(taskId, 'in_review')
       }
 
-      // Update execution progress counts
-      const execution = await sm.getExecution()
-      await sm.updateExecution({
-        tasks_in_progress: Math.max(0, execution.tasks_in_progress - 1),
-      })
+      // Update execution progress counts (only decrement if task was in_progress)
+      if (wasInProgress) {
+        const execution = await sm.getExecution()
+        await sm.updateExecution({
+          tasks_in_progress: Math.max(0, execution.tasks_in_progress - 1),
+        })
+      }
 
       // Auto-generate digest if configured
       const config = await sm.getConfig()

@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, rename, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import type {
@@ -49,10 +49,7 @@ export class StateManager {
 
   async updateConfig(patch: Partial<ForgeConfig>): Promise<void> {
     const current = await this.getConfig()
-    await this.writeJson(join(this.forgeDir, 'config.json'), {
-      ...current,
-      ...patch,
-    })
+    await this.writeJson(join(this.forgeDir, 'config.json'), deepMerge(current, patch))
   }
 
   // --- Project state ---
@@ -148,7 +145,6 @@ export class StateManager {
   }
 
   async listTasks(): Promise<Task[]> {
-    const { readdir } = await import('node:fs/promises')
     const tasksDir = join(this.forgeDir, 'tasks')
     if (!existsSync(tasksDir)) return []
     const files = await readdir(tasksDir)
@@ -176,7 +172,6 @@ export class StateManager {
   }
 
   async listDecisions(): Promise<Decision[]> {
-    const { readdir } = await import('node:fs/promises')
     const dir = join(this.forgeDir, 'decisions')
     if (!existsSync(dir)) return []
     const files = await readdir(dir)
@@ -279,4 +274,26 @@ export class StateManager {
       updated_at: new Date().toISOString(),
     }
   }
+}
+
+// Recursively merge b into a, returning a new object. Arrays in b replace arrays in a.
+function deepMerge<T extends Record<string, unknown>>(a: T, b: Partial<T>): T {
+  const result = { ...a }
+  for (const key of Object.keys(b) as (keyof T)[]) {
+    const bVal = b[key]
+    const aVal = result[key]
+    if (
+      bVal !== null &&
+      typeof bVal === 'object' &&
+      !Array.isArray(bVal) &&
+      aVal !== null &&
+      typeof aVal === 'object' &&
+      !Array.isArray(aVal)
+    ) {
+      result[key] = deepMerge(aVal as Record<string, unknown>, bVal as Record<string, unknown>) as T[keyof T]
+    } else if (bVal !== undefined) {
+      result[key] = bVal as T[keyof T]
+    }
+  }
+  return result
 }

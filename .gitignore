@@ -5,6 +5,7 @@ dist/
 coverage/
 .env
 .env.*
+!.env.example
 .DS_Store
 Thumbs.db
 # Compiled config files (tsup/vitest configs compiled by tsc --build)

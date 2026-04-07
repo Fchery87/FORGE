@@ -1,4 +1,4 @@
-import type { Task, TaskStatus, AcceptanceCriterion, TestRequirement } from '@forge-agent/types'
+import type { Task, TaskStatus } from '@forge-agent/types'
 import { TASK_TRANSITIONS } from '@forge-agent/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
@@ -106,7 +106,7 @@ export class TaskEngine {
       tasks.filter(t => t.status === 'done').map(t => t.task_id)
     )
     return tasks.filter(t =>
-      t.status === 'planned' &&
+      (t.status === 'planned' || t.status === 'ready') &&
       t.dependencies.every(dep => doneTasks.has(dep))
     )
   }
