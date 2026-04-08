@@ -14,15 +14,15 @@
     "url": "https://github.com/forge-agent/forge"
   },
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "bin": {
-    "forge": "./dist/bin/forge.js"
+    "forge": "./dist/bin/forge.mjs"
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
     }
   },
   "files": [
@@ -30,8 +30,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
-    "postbuild": "chmod +x dist/bin/forge.js || true",
+    "build": "tsdown",
+    "postbuild": "chmod +x dist/bin/forge.mjs || true",
     "test": "vitest run",
     "dev": "tsup --watch",
     "clean": "rm -rf dist *.tsbuildinfo",
