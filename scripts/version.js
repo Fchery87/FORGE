@@ -46,7 +46,15 @@ for (const pkg of packages) {
 
 // Tag the release
 execSync(`git add packages/*/package.json`, { stdio: 'inherit' })
-execSync(`git commit -m "chore: release v${version}"`, { stdio: 'inherit' })
+
+// Only commit if there are staged changes
+const diff = execSync('git diff --cached --quiet || echo changed').toString().trim()
+if (diff === 'changed') {
+  execSync(`git commit -m "chore: release v${version}"`, { stdio: 'inherit' })
+} else {
+  console.log('  (no version changes to commit)')
+}
+
 execSync(`git tag v${version}`, { stdio: 'inherit' })
 
 console.log(`\nTagged v${version}. Push with:`)

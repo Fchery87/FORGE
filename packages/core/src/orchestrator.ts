@@ -6,6 +6,8 @@ export type ForgeRole = 'builder' | 'manager' | 'executive'
 // Command names
 export type ForgeCommand =
   | 'init'
+  | 'install'
+  | 'doctor'
   | 'intake'
   | 'plan'
   | 'execute'
@@ -21,6 +23,8 @@ export type ForgeCommand =
 // Role assigned to each command
 export const COMMAND_ROLES: Record<ForgeCommand, ForgeRole> = {
   init:     'manager',
+  install:  'manager',
+  doctor:   'manager',
   intake:   'manager',
   plan:     'manager',
   execute:  'builder',

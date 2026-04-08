@@ -240,6 +240,16 @@ describe('install', () => {
     )
   })
 
+  it('writes Claude host command prompts', async () => {
+    await install('/some/project')
+
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('.claude/commands/forge-execute.md'),
+      expect.any(String),
+      'utf8',
+    )
+  })
+
   it('CLAUDE.md content contains "Forge Builder Contract"', async () => {
     await install('/some/project')
 

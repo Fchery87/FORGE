@@ -46,7 +46,7 @@ vi.mock('node:fs/promises', () => ({
 
 import { OpenCodeExecutor } from '../src/opencode-executor.js'
 import { install } from '../src/installer.js'
-import { writeFile } from 'node:fs/promises'
+import { writeFile, mkdir } from 'node:fs/promises'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -226,6 +226,20 @@ describe('install', () => {
 
     expect(writeFile).toHaveBeenCalledWith(
       expect.stringContaining('opencode.config.json'),
+      expect.any(String),
+      'utf8',
+    )
+  })
+
+  it('creates .opencode/commands for host prompts', async () => {
+    await install('/some/project')
+
+    expect(mkdir).toHaveBeenCalledWith(
+      expect.stringContaining('.opencode/commands'),
+      expect.objectContaining({ recursive: true }),
+    )
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('.opencode/commands/forge-execute.md'),
       expect.any(String),
       'utf8',
     )

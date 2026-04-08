@@ -1,5 +1,6 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   StateManager, IdGenerator, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
@@ -7,6 +8,42 @@ import type { Task } from '@forge-core/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
+import { loadExecutor } from '../runtime/adapter-loader.js'
+import { renderContextPack } from '../runtime/context-pack.js'
+
+function updateAcceptanceCriteria(task: Task, result: NonNullable<Task['result']>): Task['acceptance_criteria'] {
+  return task.acceptance_criteria.map((criterion) => {
+    const status = result.acceptance_criteria_status.find(
+      (candidate) => candidate.criterion_id === criterion.id,
+    )
+    return status
+      ? {
+          ...criterion,
+          verified: status.passed,
+          evidence_ref: status.passed ? result.summary : criterion.evidence_ref,
+        }
+      : criterion
+  })
+}
+
+function updateTestRequirements(task: Task, result: NonNullable<Task['result']>): Task['test_requirements'] {
+  const passed = result.tests_run.some((test) => test.failed === 0 && test.passed > 0)
+  const failed = result.tests_run.some((test) => test.failed > 0)
+  const wroteTests = result.tests_added.length > 0
+
+  return task.test_requirements.map((requirement, index) => {
+    if (failed) {
+      return { ...requirement, status: 'failing' }
+    }
+    if (passed && index === 0) {
+      return { ...requirement, status: 'passing' }
+    }
+    if (wroteTests) {
+      return { ...requirement, status: 'written' }
+    }
+    return requirement
+  })
+}
 
 export function register(program: Command): void {
   program
@@ -37,6 +74,11 @@ export function register(program: Command): void {
       const gen = new IdGenerator(sm)
       const engine = new TaskEngine(sm, gen)
       const ctxEngine = new ContextEngine(sm, gen, forgeDir)
+      const config = await sm.getConfig()
+      const executor = await loadExecutor({
+        name: config.adapter.executor,
+        options: config.adapter.executor_options,
+      })
 
       // Determine which task(s) to execute
       let tasksToExecute: Task[] = []
@@ -80,6 +122,8 @@ export function register(program: Command): void {
 
         // Generate context pack
         const pack = await ctxEngine.generateContextPack('builder', task.task_id)
+        const renderedPack = renderContextPack(pack)
+        await sm.writeRaw(join('runtime', `${task.task_id}.md`), renderedPack)
         logger.debug(`Context pack: ${pack.pack_id} (~${pack.estimated_tokens} tokens)`)
 
         // Check budget
@@ -88,34 +132,54 @@ export function register(program: Command): void {
           logger.warn(budget.recommendation ?? 'Context budget warning')
         }
 
-        // Dispatch to executor
-        const config = await sm.getConfig()
-        const executorName = config.adapter.executor
+        const result = await executor.dispatch({
+          task_id: task.task_id,
+          context_pack: {
+            pack_id: pack.pack_id,
+            estimated_tokens: pack.estimated_tokens,
+            content: renderedPack,
+          },
+          working_directory: process.cwd(),
+        })
+
+        const updatedTask = await engine.updateTask(task.task_id, {
+          result,
+          acceptance_criteria: updateAcceptanceCriteria(task, result),
+          test_requirements: updateTestRequirements(task, result),
+          evidence: [
+            ...task.evidence,
+            {
+              type: 'log',
+              description: `Executor result: ${result.summary}`,
+              artifact_path: join('.forge', 'runtime', `${task.task_id}.md`),
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })
 
         if (opts.json) {
-          // In JSON mode, output the context pack that would be sent
           process.stdout.write(JSON.stringify({
-            task: task.task_id,
-            executor: executorName,
-            context_pack: pack,
+            task: updatedTask.task_id,
+            executor: executor.name,
+            context_pack: pack.pack_id,
+            result,
           }, null, 2) + '\n')
           continue
         }
 
         logger.log('')
-        logger.log(kleur.bold('Context Pack Generated'))
-        logger.log(`  Pack ID:    ${pack.pack_id}`)
-        logger.log(`  Tokens:     ~${pack.estimated_tokens}`)
-        logger.log(`  Objective:  ${pack.sections.objective}`)
+        logger.log(kleur.bold('Executor Result'))
+        logger.log(`  Task:       ${updatedTask.task_id}`)
+        logger.log(`  Executor:   ${executor.name}`)
+        logger.log(`  Status:     ${result.status}`)
+        logger.log(`  Summary:    ${result.summary}`)
+        logger.log(`  Runtime:    .forge/runtime/${task.task_id}.md`)
         logger.log('')
-        logger.warn(`Executor "${executorName}" dispatch not yet active.`)
-        logger.log('The context pack above contains everything a worker needs.')
-        logger.log('To complete this task:')
-        logger.log(`  1. Run \`forge install ${executorName}\` to install an executor adapter`)
-        logger.log(`  2. Or use the context pack above to manually guide your AI agent`)
-        logger.log(`  3. When done, run \`forge merge --task ${task.task_id}\` to record results`)
+        logger.log(`Next: run \`forge merge --task ${task.task_id}\` when the result is ready for review`)
         logger.log('')
       }
+
+      await executor.dispose()
 
       // Record action
       const ctx = await sm.getContext()

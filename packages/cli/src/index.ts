@@ -2,6 +2,8 @@ import { Command } from 'commander'
 import { setupLogger, logger } from './utils/logger.js'
 import { resolveForgeDir } from './utils/cli-args.js'
 import { register as registerInit } from './commands/init.js'
+import { register as registerInstall } from './commands/install.js'
+import { register as registerDoctor } from './commands/doctor.js'
 import { register as registerIntake } from './commands/intake.js'
 import { register as registerStatus } from './commands/status.js'
 import { register as registerPlan } from './commands/plan.js'
@@ -30,6 +32,8 @@ program
 
 // Register all commands
 registerInit(program)
+registerInstall(program)
+registerDoctor(program)
 registerIntake(program)
 registerStatus(program)
 registerPlan(program)

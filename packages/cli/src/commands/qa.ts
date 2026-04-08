@@ -3,9 +3,17 @@ import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, ReviewEngine, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
+import type { VerificationPlan, VerificationResult } from '@forge-core/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
+import { loadVerifiers } from '../runtime/adapter-loader.js'
+
+function aggregateVerificationResults(results: VerificationResult[]): VerificationResult['status'] {
+  if (results.every((result) => result.status === 'pass')) return 'pass'
+  if (results.every((result) => result.status === 'fail')) return 'fail'
+  return 'partial'
+}
 
 export function register(program: Command): void {
   program
@@ -91,18 +99,69 @@ export function register(program: Command): void {
         logger.success(`QA passed for ${taskIds.length} task(s)`)
         logger.log('Next: forge ship')
       } else {
-        // No verifier configured — show what would be verified
         const config = await sm.getConfig()
+        const verifiers = await loadVerifiers(config.verification.verifiers)
+        const plan: VerificationPlan = {
+          plan_id: `QA-${Date.now()}`,
+          task_ids: taskIds,
+          scope: options.full ? 'full' : 'task',
+          changed_files: [],
+          acceptance_criteria_ids: [],
+          strategies: config.verification.default_strategy,
+        }
+
+        const results = await Promise.all(verifiers.map((verifier) => verifier.verify(plan)))
+        for (const verifier of verifiers) {
+          await verifier.dispose()
+        }
+
+        const aggregateStatus = aggregateVerificationResults(results)
+        await sm.writeRaw(
+          `qa/${plan.plan_id}.json`,
+          JSON.stringify({ plan, results, aggregateStatus }, null, 2),
+        )
+
+        if (aggregateStatus === 'pass') {
+          for (const taskId of taskIds) {
+            const task = await taskEngine.getTask(taskId).catch(() => null)
+            if (task?.status === 'qa_pending') {
+              await taskEngine.transition(taskId, 'done')
+              logger.success(`Task ${taskId} → done`)
+            }
+          }
+
+          const execution = await sm.getExecution()
+          await sm.updateExecution({
+            tasks_done: execution.tasks_done + taskIds.length,
+            tasks_in_progress: Math.max(0, execution.tasks_in_progress - taskIds.length),
+          })
+          await ctxEngine.generateViews()
+
+          if (opts.json) {
+            process.stdout.write(JSON.stringify({ plan, results, aggregateStatus }, null, 2) + '\n')
+            return
+          }
+
+          logger.success(`QA passed for ${taskIds.length} task(s)`)
+          logger.log(`Evidence: .forge/qa/${plan.plan_id}.json`)
+          logger.log('Next: forge ship')
+          return
+        }
+
+        if (opts.json) {
+          process.stdout.write(JSON.stringify({ plan, results, aggregateStatus }, null, 2) + '\n')
+          process.exit(1)
+        }
+
         logger.log('')
         logger.log(kleur.bold('QA Plan'))
         logger.log(`Verifier: ${config.verification.verifiers.map(v => v.name).join(', ')}`)
         logger.log(`Strategy: ${config.verification.default_strategy.join(', ')}`)
         logger.log(`Tasks: ${taskIds.join(', ')}`)
         logger.log('')
-        logger.warn('No verifier adapter active. To run automated QA:')
-        logger.log('  1. Install a verifier: forge install verifier-playwright (coming soon)')
-        logger.log('  2. Or use --pass to manually mark QA as passed')
-        logger.log(`     forge qa --pass${options.task ? ` --task ${options.task}` : ''}`)
+        logger.warn(`QA ${aggregateStatus}. Evidence saved to .forge/qa/${plan.plan_id}.json`)
+        logger.log('Review the verification issues before retrying or using --pass.')
+        process.exit(1)
       }
 
       // Record action

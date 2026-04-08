@@ -181,14 +181,16 @@ forge --version
 forge --help
 ```
 
-### Install an executor adapter
+### Install Forge into a host agent
 
 ```bash
-# For Claude Code
-npm install -g @forge-core/adapter-claude-code
+# Pick the host you use in this repository
+forge install codex
+forge install claude-code
+forge install opencode
 
-# For OpenCode
-npm install -g @forge-core/adapter-opencode
+# Validate the integration and executor binary
+forge doctor
 ```
 
 ---
@@ -456,7 +458,7 @@ Forge stores configuration in `.forge/config.json`. The `forge config` command r
 
 ## Executor Adapters
 
-Executors are the adapters that perform AI coding work. Forge dispatches a structured context pack to the executor and receives a structured result back.
+Executors are the adapters that perform AI coding work. Forge installs host-native prompts for supported agent CLIs and can also dispatch work through those CLIs directly from `forge execute`.
 
 ### Executor interface
 
@@ -489,10 +491,10 @@ interface ExecutorResult {
 
 ### Claude Code (`@forge-core/adapter-claude-code`)
 
-Dispatches work to the `claude` CLI via subprocess.
+Installs Claude-specific host prompts into `.claude/` and dispatches work to the `claude` CLI via subprocess when `forge execute` is used.
 
 ```bash
-npm install -g @forge-core/adapter-claude-code
+forge install claude-code
 forge config adapter.executor claude-code
 ```
 
@@ -521,16 +523,29 @@ forge config adapter.executor claude-code
 
 ### OpenCode (`@forge-core/adapter-opencode`)
 
-Dispatches work to the `opencode` CLI via subprocess.
+Installs OpenCode host prompts into `.opencode/` and dispatches work to the `opencode` CLI via subprocess when `forge execute` is used.
 
 ```bash
-npm install -g @forge-core/adapter-opencode
+forge install opencode
 forge config adapter.executor opencode
 ```
 
 **How it works:** Same pattern — temp file prompt, `opencode run --print <file>`, parse last JSON line.
 
 **Requirements:** `opencode` CLI installed and configured with a provider API key.
+
+### Codex (`@forge-core/adapter-codex`)
+
+Installs Codex host prompts into `.codex/` and dispatches work to the `codex` CLI via `codex exec` when `forge execute` is used.
+
+```bash
+forge install codex
+forge config adapter.executor codex
+```
+
+**How it works:** Forge writes the rendered context pack to `.forge/runtime/<task>.md`, streams that prompt into `codex exec`, and parses the final JSON result written by Codex.
+
+**Requirements:** `codex` CLI installed and authenticated.
 
 ### Custom Executors
 

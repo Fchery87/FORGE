@@ -11,6 +11,7 @@ export default defineConfig({
       '@forge-core/types',
       '@forge-core/core',
       '@forge-core/cli',
+      '@forge-core/adapter-codex',
       '@forge-core/adapter-claude-code',
       '@forge-core/adapter-opencode',
       '@forge-core/verifier-test-runner',

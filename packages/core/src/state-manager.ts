@@ -30,6 +30,7 @@ export class StateManager {
       join(this.forgeDir, 'reviews'),
       join(this.forgeDir, 'qa'),
       join(this.forgeDir, 'qa', 'evidence'),
+      join(this.forgeDir, 'runtime'),
       join(this.forgeDir, 'snapshots'),
       join(this.forgeDir, 'views'),
     ]

@@ -6,6 +6,9 @@ import { resolveForgeDir } from '../utils/cli-args.js'
 
 // Known top-level config keys that can be set via CLI
 const KNOWN_KEYS = new Set([
+  'host.type',
+  'host.install_path',
+  'runtime.mode',
   'adapter.executor',
   'context.budget_warning_threshold',
   'context.context_window_estimate',

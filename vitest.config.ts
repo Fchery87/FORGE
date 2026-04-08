@@ -7,6 +7,7 @@ export default defineConfig({
       'packages/core',
       'packages/cli',
       'packages/verifier-test-runner',
+      'packages/adapter-codex',
       'packages/adapter-claude-code',
       'packages/adapter-opencode',
       'packages/verifier-playwright',

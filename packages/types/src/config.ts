@@ -12,6 +12,13 @@ export interface ForgeConfig {
     description: string
     goals: string[]
   }
+  host: {
+    type: string
+    install_path: string | null
+  }
+  runtime: {
+    mode: 'host-native' | 'subprocess'
+  }
   adapter: {
     executor: string
     executor_options: Record<string, unknown>
@@ -49,6 +56,13 @@ export const DEFAULT_CONFIG: ForgeConfig = {
     name: '',
     description: '',
     goals: [],
+  },
+  host: {
+    type: 'claude-code',
+    install_path: null,
+  },
+  runtime: {
+    mode: 'host-native',
   },
   adapter: {
     executor: 'claude-code',
