@@ -1,0 +1,58 @@
+Forge Proprietary License
+
+Copyright (c) 2026 Fchery87. All rights reserved.
+
+DEFINITIONS
+
+"Software" means the Forge source code, documentation, configuration files,
+and all associated materials in this repository.
+
+"Published Packages" means the compiled, distributed npm packages published
+under the @forge-core scope (e.g., @forge-core/cli, @forge-core/core).
+
+"Use" means installing the Published Packages as a dependency in your own
+project and running the compiled software for its intended purpose.
+
+GRANT OF USE
+
+Permission is granted, free of charge, to any person obtaining a copy of
+the Published Packages to Use the software for any lawful purpose, including
+commercial use, subject to the restrictions below.
+
+RESTRICTIONS
+
+The following are expressly prohibited without prior written permission from
+the copyright holder:
+
+1. Copying, reproducing, or distributing the source code in whole or in part.
+
+2. Modifying, adapting, translating, or creating derivative works based on
+   the source code.
+
+3. Reverse engineering, decompiling, or disassembling the software for the
+   purpose of recreating it or creating a competing product.
+
+4. Sublicensing, selling, renting, leasing, or transferring rights to the
+   source code or any derivative works.
+
+5. Building, distributing, or commercializing a product or service that
+   replicates or substantially replicates the functionality of Forge using
+   the source code as a basis.
+
+6. Removing or altering any copyright, trademark, or proprietary notices
+   from any portion of the software.
+
+NO WARRANTIES
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF,
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+CONTACT
+
+To request permission for any use not covered by this license, contact the
+copyright holder at: https://github.com/Fchery87

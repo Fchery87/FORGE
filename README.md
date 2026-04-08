@@ -1,5 +1,10 @@
 # Forge
 
+[![CI](https://github.com/Fchery87/FORGE/actions/workflows/ci.yml/badge.svg)](https://github.com/Fchery87/FORGE/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@forge-core/cli)](https://www.npmjs.com/package/@forge-core/cli)
+[![Node](https://img.shields.io/node/v/@forge-core/cli)](https://nodejs.org)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](#license)
+
 **An installable local AI coding agent framework for long-running software delivery.**
 
 Forge is not a SaaS product, not a browser-first tool, and not a one-shot prompt wrapper. It is a local-first orchestration framework that gives your AI coding agents a structured operating environment — with enforced quality gates, canonical state, and clean context management — so they can work through real software projects from initial planning to production ship.
@@ -863,7 +868,7 @@ forge/
 ### Technical stack
 
 - **TypeScript 6** — strict mode, ESM, NodeNext module resolution
-- **tsup 8** — ESM build with DTS generation per package
+- **tsdown 0.21.7** — ESM build with DTS generation per package (powered by Rolldown)
 - **vitest 4** — testing with workspace configuration
 - **commander 14** — CLI argument parsing
 - **kleur** — terminal colors (no stack traces in user-facing errors)
@@ -886,4 +891,8 @@ forge/
 
 ## License
 
-MIT
+Copyright © 2026 Fchery87. All rights reserved.
+
+Forge is proprietary software. You may install and use the published npm packages (`@forge-core/*`) in your own projects free of charge. You may **not** copy, modify, merge, distribute, sublicense, or sell copies of the source code, nor create derivative works or competing products based on Forge, without explicit written permission from the copyright holder.
+
+See the [LICENSE](LICENSE) file for full terms.
