@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc --build --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "npm run build",

@@ -33,7 +33,7 @@
     "build": "tsdown",
     "postbuild": "chmod +x dist/bin/forge.mjs || true",
     "test": "vitest run",
-    "dev": "tsup --watch",
+    "dev": "tsdown --watch",
     "clean": "rm -rf dist *.tsbuildinfo",
     "prepublishOnly": "npm run build"
   },
