@@ -1,0 +1,15 @@
+{
+  "name": "planning-and-task-breakdown",
+  "description": "Decompose work into small verifiable tasks.",
+  "version": "1.0.0",
+  "phases": ["planning"],
+  "triggers": [
+    { "type": "command", "value": "plan" },
+    { "type": "phase", "value": "planning" }
+  ],
+  "requires": ["spec-driven-development"],
+  "verification": ["Tasks are ordered and independently verifiable"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

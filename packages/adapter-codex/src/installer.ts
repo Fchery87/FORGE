@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-const CODEX_COMMANDS: Record<string, string> = {
+const DEFAULT_CODEX_COMMANDS: Record<string, string> = {
   'forge-execute.md': `Read \`.forge/views/STATUS.md\` and the latest context pack in \`.forge/runtime/\`.
 Implement the assigned Forge task, run relevant verification, and leave a structured JSON result as the final line.`,
   'forge-review.md': `Review the active Forge task in \`.forge/tasks/\` using the project state in \`.forge/views/STATUS.md\`.
@@ -10,7 +10,7 @@ Return findings first, then a concise approval or rejection summary.`,
 Summarize pass/fail status, evidence, and follow-up actions.`,
 }
 
-const AGENTS_CONTENT = `# Forge Host Integration
+const DEFAULT_AGENTS_CONTENT = `# Forge Host Integration
 
 This repository uses Forge as a host-native workflow layer.
 
@@ -19,18 +19,23 @@ This repository uses Forge as a host-native workflow layer.
 - Write implementation results as structured JSON when a Forge command requires it
 `
 
-export async function install(targetDir: string): Promise<void> {
+export interface CodexInstallContent {
+  agentsContent?: string
+  commands?: Record<string, string>
+}
+
+export async function install(targetDir: string, content: CodexInstallContent = {}): Promise<void> {
   const codexDir = join(targetDir, '.codex')
   const commandsDir = join(codexDir, 'commands')
   await mkdir(commandsDir, { recursive: true })
 
   await Promise.all(
-    Object.entries(CODEX_COMMANDS).map(([fileName, content]) =>
-      writeFile(join(commandsDir, fileName), content, 'utf8'),
+    Object.entries(content.commands ?? DEFAULT_CODEX_COMMANDS).map(([fileName, body]) =>
+      writeFile(join(commandsDir, fileName), body, 'utf8'),
     ),
   )
 
-  await writeFile(join(codexDir, 'AGENTS.md'), AGENTS_CONTENT, 'utf8')
+  await writeFile(join(codexDir, 'AGENTS.md'), content.agentsContent ?? DEFAULT_AGENTS_CONTENT, 'utf8')
 
   console.log(`[forge] Installed Codex host integration to ${codexDir}`)
 }

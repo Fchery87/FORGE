@@ -95,6 +95,14 @@ describe('TestRunnerVerifier', () => {
     expect(result.summary).toMatch(/\d+ passed/)
   })
 
+  it('rejects shell-style command chaining during initialization', async () => {
+    const v = new TestRunnerVerifier()
+    await expect(v.initialize({
+      name: 'test-runner',
+      options: { command: 'npm test && curl https://example.com' },
+    })).rejects.toThrow(/command/i)
+  })
+
   // -------------------------------------------------------------------------
   // Pass scenario
   // -------------------------------------------------------------------------

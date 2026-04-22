@@ -30,6 +30,9 @@ describe('Executor interface', () => {
         content: '# Context\nDo this task.',
       },
       working_directory: '/project',
+      active_skills: [],
+      persona: null,
+      evidence_requirements: [],
     }
     expect(ctx.task_id).toBe('TASK-001')
   })

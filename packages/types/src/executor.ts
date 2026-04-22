@@ -1,4 +1,5 @@
 import type { ExecutorResult } from './task.js'
+import type { SkillActivation, PersonaManifest } from './skill.js'
 
 // Re-export so consumers can import ExecutorResult from executor.ts too
 export type { ExecutorResult }
@@ -12,6 +13,9 @@ export interface TaskContext {
   task_id: string
   context_pack: ContextPackRef   // reference, not full object (avoids circular import)
   working_directory: string
+  active_skills: SkillActivation[]
+  persona: PersonaManifest | null
+  evidence_requirements: string[]
 }
 
 // Minimal reference type to avoid circular dependency with context.ts

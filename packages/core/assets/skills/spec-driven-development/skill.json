@@ -1,0 +1,15 @@
+{
+  "name": "spec-driven-development",
+  "description": "Clarify requirements before implementation.",
+  "version": "1.0.0",
+  "phases": ["planning"],
+  "triggers": [
+    { "type": "command", "value": "plan" },
+    { "type": "phase", "value": "planning" }
+  ],
+  "requires": ["using-forge-skills"],
+  "verification": ["Objectives and acceptance criteria are explicit"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

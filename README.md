@@ -5,9 +5,11 @@
 [![Node](https://img.shields.io/node/v/@forge-core/cli)](https://nodejs.org)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](#license)
 
-**An installable local AI coding agent framework for long-running software delivery.**
+**The local workflow system for AI coding agents that need to ship real software.**
 
-Forge is not a SaaS product, not a browser-first tool, and not a one-shot prompt wrapper. It is a local-first orchestration framework that gives your AI coding agents a structured operating environment — with enforced quality gates, canonical state, and clean context management — so they can work through real software projects from initial planning to production ship.
+Forge gives coding agents the structure they usually lack: explicit roles, enforceable workflow stages, durable project state, review and QA gates, and a native skills layer that shapes how work gets done. Instead of treating each session like a fresh prompt, Forge keeps the project moving from planning through ship with a single source of truth on disk.
+
+Every piece of state Forge reads from or writes to disk is runtime-validated against a Zod schema. Corrupt files are rejected with precise, actionable errors instead of silent failures.
 
 ---
 
@@ -33,14 +35,21 @@ Forge is not a SaaS product, not a browser-first tool, and not a one-shot prompt
 
 ## Why Forge
 
-Modern AI coding agents (Claude Code, OpenCode, Copilot Workspace) are powerful at the task level but struggle with multi-day, multi-task projects. Common failure modes:
+Modern AI coding agents are strong at solving isolated tasks. They are much weaker at running a project for days, across many tasks, without drifting. Common failure modes:
 
 - **Context rot** — the context window fills with stale information; quality degrades silently
 - **No state** — each session starts cold, losing all decisions, rationale, and progress
 - **No gates** — agents merge untested code, skip reviews, or ship before QA
 - **No accountability** — there is no clear record of what was done, why, and by whom
 
-Forge solves this by providing the _organizational structure_ around AI agents that humans take for granted: a project manager, a quality process, and institutional memory.
+Forge solves this by adding the missing operating system around the agent:
+
+- a **manager layer** that plans and tracks work
+- a **builder layer** that implements against scoped context
+- an **executive layer** that enforces review, QA, and ship readiness
+- a **skills layer** that injects the right workflow guidance at the right time
+
+The result is a local-first system for agents that need to behave more like an engineering organization and less like a chat session.
 
 ---
 
@@ -96,17 +105,18 @@ Gates are enforced by `GateKeeper` — a pure, stateless module with no side eff
 
 ## Architecture
 
-Forge is a TypeScript ESM monorepo with seven packages arranged in three layers:
+Forge is a TypeScript ESM monorepo with eight packages arranged in three layers:
 
 ```
 Layer 3: Adapters (plug-in executors and verifiers)
   @forge-core/adapter-claude-code   — dispatches work to the claude CLI
+  @forge-core/adapter-codex         — dispatches work to the codex CLI
   @forge-core/adapter-opencode      — dispatches work to the opencode CLI
   @forge-core/verifier-test-runner  — runs shell test commands
   @forge-core/verifier-playwright   — browser-based QA via Playwright
 
-Layer 2: Contracts (shared TypeScript interfaces)
-  @forge-core/types                 — all data schemas and plugin interfaces
+Layer 2: Contracts (shared TypeScript interfaces and runtime schemas)
+  @forge-core/types                 — all data schemas, Zod validators, and plugin interfaces
 
 Layer 1: Core Engine (business logic, no I/O except .forge/ state files)
   @forge-core/core                  — Orchestrator, StateManager, TaskEngine,
@@ -114,28 +124,40 @@ Layer 1: Core Engine (business logic, no I/O except .forge/ state files)
                                        IdGenerator
 
 CLI Surface
-  @forge-core/cli                   — 12 commands, terminal formatters, JSON output
+  @forge-core/cli                   — 14 commands, structured error handling,
+                                       terminal formatters, JSON output
 ```
+
+### Native Skills Layer
+
+Forge includes a native skills layer on top of the workflow engine:
+
+- **Skills** are typed manifests plus instruction/reference assets that Forge resolves per command and phase.
+- **Personas** are typed prompt overlays for review, QA, and ship workflows.
+- **Hooks** are declarative lifecycle events that can inject guidance, attach references, or block unsafe transitions.
+
+These are Forge-managed primitives, not loose prompt files. Host integrations for Codex, Claude Code, and OpenCode are generated from Forge config and the active built-in or project-local registry, so workflow behavior stays consistent across hosts.
 
 ### Data Flow
 
 ```
 CLI Command
-  -> Orchestrator   — activates role, checks permissions and preconditions
-  -> StateManager   — reads current project state from .forge/
-  -> Domain module  — TaskEngine / ReviewEngine / ContextEngine applies logic
+  -> Command runner   — catches structured errors, sets exit code
+  -> Orchestrator     — activates role, checks permissions and preconditions
+  -> StateManager     — reads current project state from .forge/ (schema-validated)
+  -> Domain module    — TaskEngine / ReviewEngine / ContextEngine applies logic
   -> Executor or Verifier — dispatched for AI work or verification
-  -> GateKeeper     — validates the state transition is permitted
-  -> StateManager   — writes updated state atomically to .forge/
-  -> ContextEngine  — regenerates .forge/views/ Markdown files
-  -> CLI formatter  — renders terminal output (or JSON with --json)
+  -> GateKeeper       — validates the state transition is permitted
+  -> StateManager     — writes updated state atomically to .forge/ (schema-validated)
+  -> ContextEngine    — regenerates .forge/views/ Markdown files
+  -> CLI formatter    — renders terminal output (or JSON with --json)
 ```
 
 ### Core Module Responsibilities
 
 **Orchestrator** — Command dispatcher and role router. Enforces that each command is valid in the current project phase and is performed by the correct role. Stateless — runs once per command invocation.
 
-**StateManager** — Sole module with read/write access to `.forge/` JSON state files. Provides typed accessors for all five state domains. Handles atomic writes (write to `.tmp`, then `rename`) to prevent partial state on crash.
+**StateManager** — Sole module with read/write access to `.forge/` JSON state files. Provides typed accessors for all five state domains. All reads and writes are validated against Zod schemas — corrupt or invalid files are rejected with `ForgeValidationError` before they reach the engine. Handles atomic writes (write to `.tmp`, then `rename`) to prevent partial state on crash.
 
 **TaskEngine** — Task CRUD and state machine enforcement. Validates every transition against `TASK_TRANSITIONS`. Queries tasks by status, phase, or readiness (dependencies all `done`).
 
@@ -152,7 +174,9 @@ CLI Command
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | State format | JSON source of truth + generated Markdown views | Single unambiguous source; human-readable views regenerated on demand |
+| State integrity | Zod schema validation at every I/O boundary | Corrupt or tampered files are caught immediately with field-level error detail |
 | Atomic writes | Write to `.tmp`, then `rename` | No corrupt state on crash or power loss |
+| Error handling | Structured CLI errors with centralized exit codes | Commands never call `process.exit()` directly; all failures flow through typed error classes |
 | Plugin interfaces | `Executor` and `Verifier` are plain TypeScript interfaces | Any adapter that satisfies the interface works; core stays lightweight |
 | Context packs | Scoped bundle per task | Executor receives only relevant context, not entire project history |
 | Sequential IDs | Human-readable padded counters | `TASK-001` is easier to work with than `uuid-abc-123` |
@@ -181,23 +205,25 @@ forge --version
 forge --help
 ```
 
-### Install Forge into a host agent
+### Install Forge into your host agent
 
 ```bash
-# Pick the host you use in this repository
+# Pick the agent you actually use
 forge install codex
 forge install claude-code
 forge install opencode
 
-# Validate the integration and executor binary
+# Confirm the host integration and executor binary
 forge doctor
 ```
+
+Forge generates host-facing integration files from its own registry and config. You do not need to maintain separate prompt files for each host.
 
 ---
 
 ## Quick Start
 
-This walkthrough creates a project from scratch and runs the full delivery lifecycle.
+This walkthrough creates a project from scratch and takes it through the full Forge lifecycle.
 
 ### 1. Initialize a project
 
@@ -222,16 +248,16 @@ This creates the `.forge/` directory with default configuration and empty projec
   views/
 ```
 
-### 2. Define your goals
+### 2. Capture the project goals
 
 ```bash
 forge intake "Build a REST API with Express, PostgreSQL, and JWT authentication"
 forge intake "All endpoints must have OpenAPI documentation"
 ```
 
-Run `intake` as many times as needed to capture goals and constraints.
+Use `intake` to record the outcomes that matter before the agent starts planning. Add as many goals and constraints as needed.
 
-### 3. Check project status
+### 3. See what Forge knows
 
 ```bash
 forge status             # summary view
@@ -245,9 +271,9 @@ forge status --json      # machine-readable output
 forge plan
 ```
 
-This transitions the project to `planning` status and creates a planning task. Tasks can be added to `.forge/tasks/` manually or via the executor during the plan phase.
+This moves the project into `planning` and creates the first planning artifact. From there, Forge can track tasks, dependencies, and readiness instead of treating planning as an unstructured conversation.
 
-### 5. Execute a task
+### 5. Dispatch the next task
 
 ```bash
 forge execute                    # picks the next ready task automatically
@@ -255,17 +281,17 @@ forge execute --task TASK-001    # execute a specific task
 forge execute --wave             # execute all ready tasks
 ```
 
-Forge generates a **context pack** for the task — a structured prompt containing the task definition, acceptance criteria, relevant project context, and result format instructions — then dispatches it to your configured executor adapter.
+Forge generates a scoped **context pack** for the task, activates the relevant skills and personas, and dispatches the work through your configured executor. The agent gets just enough context to act without dragging the whole project history into every run.
 
-### 6. Submit for review
+### 6. Move completed work into review
 
 ```bash
 forge merge --task TASK-001
 ```
 
-GateKeeper validates prerequisites before allowing the transition to `in_review`. If the task lacks a passing test or a verified acceptance criterion, the merge is rejected with specific reasons. Use `--force` to bypass for draft work.
+Before the task can enter review, Forge checks the gate conditions. If tests are still failing or acceptance criteria are not verified, the transition is rejected with explicit reasons instead of letting weak work drift forward.
 
-### 7. Conduct the review
+### 7. Run the review
 
 ```bash
 forge review              # implementation review
@@ -273,25 +299,25 @@ forge review --arch       # architecture review (required before shipping by def
 forge review --pass-all   # approve all checklist items
 ```
 
-Review checklists are tailored by review type. An approved review records a `ReviewArtifact` in `.forge/reviews/`.
+Review checklists are tailored to the workflow stage. Approved reviews become durable artifacts in `.forge/reviews/`, which means review history survives restarts instead of disappearing into chat logs.
 
-### 8. Run QA
+### 8. Verify the result
 
 ```bash
 forge qa             # runs configured verifiers
 forge qa --pass      # mark QA as passed manually
 ```
 
-Verifiers run against tasks in `qa_pending` status. Evidence (screenshots, test output) is stored in `.forge/qa/evidence/`.
+Verifiers run against tasks in `qa_pending` and store evidence alongside the result. Screenshots, logs, and test output live in `.forge/qa/` so QA has a real audit trail.
 
-### 9. Ship
+### 9. Ship with a final checkpoint
 
 ```bash
 forge ship --dry-run    # check readiness without shipping
 forge ship              # validate all gates and mark the project shipped
 ```
 
-Ship validates that every task is `done`, every required review is `approved`, and all QA criteria are met. On success, the project status is set to `shipped` and a final snapshot is generated.
+Ship is the final gate. Forge checks task completion, review approval, and QA status before marking the project `shipped` and capturing a final snapshot.
 
 ---
 
@@ -349,22 +375,27 @@ Snapshots capture the complete project state: all task data, decisions, executio
 
 ## Command Reference
 
+Forge commands are grouped by role on purpose. The split is part of the product, not just a documentation convenience.
+
 ### Commands
 
 | Command | Role | Description |
 |---------|------|-------------|
-| `forge init` | Manager | Initialize `.forge/` directory and default config |
-| `forge intake <goal>` | Manager | Record a project goal or constraint |
-| `forge plan` | Manager | Create a planning task; set project to planning |
-| `forge status` | Manager | Show project status, progress, and context health |
-| `forge execute` | Builder | Dispatch the next ready task to the executor |
-| `forge merge` | Builder | Submit a completed task for review |
-| `forge review` | Executive | Conduct implementation or architecture review |
-| `forge qa` | Executive | Run QA verification against pending tasks |
-| `forge ship` | Executive | Validate all gates and mark the project shipped |
-| `forge snapshot` | Manager | Capture full project state to a snapshot file |
-| `forge restore` | Manager | Restore project state from a snapshot |
-| `forge config` | Manager | View or update Forge configuration |
+| `forge init` | Manager | Create the Forge workspace and baseline state |
+| `forge install <host>` | Manager | Install Forge host integration for a supported agent CLI |
+| `forge doctor` | Manager | Validate host integration and executor availability |
+| `forge intake <goal>` | Manager | Record goals, constraints, and delivery intent |
+| `forge plan` | Manager | Move the project into planning and create planning work |
+| `forge status` | Manager | Show project health, progress, and context budget |
+| `forge execute` | Builder | Dispatch the next ready task with scoped runtime context |
+| `forge merge` | Builder | Submit completed work to Forge’s review gates |
+| `forge review` | Executive | Run implementation or architecture review with checklist artifacts |
+| `forge qa` | Executive | Run verification and record QA evidence |
+| `forge ship` | Executive | Validate release readiness and mark the project shipped |
+| `forge snapshot` | Manager | Capture a full handoff snapshot of current state |
+| `forge restore` | Manager | Restore the project from a saved snapshot |
+| `forge config` | Manager | Read or update Forge configuration |
+| `forge skills` | Manager | Inspect discovered skills and explain how a skill is defined |
 
 ### Global flags
 
@@ -406,7 +437,16 @@ forge config adapter.executor opencode      # set a value
 
 ## Configuration
 
-Forge stores configuration in `.forge/config.json`. The `forge config` command reads and writes values without requiring you to edit JSON directly.
+Forge stores configuration in `.forge/config.json`. You can edit it directly, but in normal use you should prefer `forge config` so changes stay deliberate and inspectable.
+
+### What configuration controls
+
+Configuration decides:
+
+- which host and executor Forge uses
+- which verifiers define QA
+- how aggressively Forge manages context budget
+- whether the native skills, personas, and hooks layers are active
 
 ### Full schema
 
@@ -448,6 +488,11 @@ Forge stores configuration in `.forge/config.json`. The `forge config` command r
 | `context.budget_warning_threshold` | number | `80000` | Token count at which budget warning activates |
 | `context.context_window_estimate` | number | `128000` | Estimated total context window size |
 | `context.auto_digest_on_merge` | boolean | `true` | Auto-generate digest when a task is merged |
+| `skills.enabled` | boolean | `true` | Enable Forge's native skills registry and activation |
+| `skills.search_paths` | string[] | `[".forge/skills"]` | Project-local skill search paths |
+| `skills.auto_activate` | boolean | `true` | Inject the Forge meta-skill automatically |
+| `personas.default_for_review` | string | `null` | Default persona overlay for `forge review` |
+| `hooks.enabled` | boolean | `true` | Enable declarative Forge lifecycle hooks |
 | `testing.test_command` | string | `npm test` | Command the test-runner verifier executes |
 | `testing.test_pattern` | string | `**/*.test.ts` | Glob pattern for test files |
 | `review.require_architecture_review` | boolean | `true` | Require `forge review --arch` before shipping |
@@ -458,7 +503,7 @@ Forge stores configuration in `.forge/config.json`. The `forge config` command r
 
 ## Executor Adapters
 
-Executors are the adapters that perform AI coding work. Forge installs host-native prompts for supported agent CLIs and can also dispatch work through those CLIs directly from `forge execute`.
+Executors are the bridge between Forge’s workflow engine and the AI coding agent you actually use. Forge owns the workflow, state, skills, and context packing. The executor’s job is to deliver that runtime context to the host and return a structured result.
 
 ### Executor interface
 
@@ -491,7 +536,7 @@ interface ExecutorResult {
 
 ### Claude Code (`@forge-core/adapter-claude-code`)
 
-Installs Claude-specific host prompts into `.claude/` and dispatches work to the `claude` CLI via subprocess when `forge execute` is used.
+Generates Claude-specific host files in `.claude/` and dispatches work to the `claude` CLI when `forge execute` runs.
 
 ```bash
 forge install claude-code
@@ -523,7 +568,7 @@ forge config adapter.executor claude-code
 
 ### OpenCode (`@forge-core/adapter-opencode`)
 
-Installs OpenCode host prompts into `.opencode/` and dispatches work to the `opencode` CLI via subprocess when `forge execute` is used.
+Generates OpenCode host files in `.opencode/` and dispatches work to the `opencode` CLI when `forge execute` runs.
 
 ```bash
 forge install opencode
@@ -536,7 +581,7 @@ forge config adapter.executor opencode
 
 ### Codex (`@forge-core/adapter-codex`)
 
-Installs Codex host prompts into `.codex/` and dispatches work to the `codex` CLI via `codex exec` when `forge execute` is used.
+Generates Codex host files in `.codex/` and dispatches work to the `codex` CLI via `codex exec` when `forge execute` runs.
 
 ```bash
 forge install codex
@@ -572,7 +617,7 @@ export class MyExecutor implements Executor {
 
 ## Verifier Adapters
 
-Verifiers validate completed work. They produce `VerificationResult` objects containing check results, evidence artifacts, and issues.
+Verifiers are how Forge turns “looks good” into actual proof. They validate completed work and return structured evidence, issues, and pass/fail status.
 
 ### Verifier interface
 
@@ -714,13 +759,16 @@ All Forge state is stored in `.forge/` at the project root. The directory is cre
     PLAN.md
 ```
 
-### Atomic writes
+### Atomic writes and state integrity
 
 Every state mutation uses a crash-safe write pattern:
-1. New content written to `<file>.tmp`
-2. File atomically renamed to replace the original
+1. Data is validated against its Zod schema before serialization
+2. New content written to `<file>.tmp`
+3. File atomically renamed to replace the original
 
 A crash during any write leaves a `.tmp` file, never a corrupt state file. The original is always preserved until the new content is fully written.
+
+If a file on disk is corrupt or does not match the expected schema, Forge throws `ForgeValidationError` with the file path and a list of specific fields that failed validation. This makes it straightforward to diagnose and fix state problems without guessing.
 
 ### Sequential IDs
 
@@ -740,11 +788,11 @@ Counters are persisted in `config.json` and incremented on each `next()` call. I
 
 ## Context Management
 
-Context management is a first-class concern in Forge. AI agents routinely exhaust context windows mid-project; Forge provides the tooling to handle this without losing progress.
+Context management is one of Forge’s main reasons to exist. Agents lose quality as sessions get longer. Forge keeps context scoped, tracked, and restorable.
 
 ### Context packs
 
-Each task dispatch includes a **context pack** — a scoped bundle of information relevant to that specific task:
+Each task dispatch includes a **context pack** built for that specific step of work:
 
 - Task definition, description, and rationale
 - Acceptance criteria and test requirements
@@ -752,8 +800,10 @@ Each task dispatch includes a **context pack** — a scoped bundle of informatio
 - Decisions made during the project
 - Files in scope for the task
 - Current execution progress
+- Active skills and persona overlays for the command
+- Verification gates that must be satisfied before the next transition
 
-The executor receives only what it needs, not the entire project history. Context packs are estimated for token cost before dispatch.
+The executor gets only what it needs for that run, not the entire project history. Forge also budgets skill and reference payloads so packs stay bounded as the system grows.
 
 ### Budget tracking
 
@@ -844,9 +894,16 @@ npm run build
 ### Run tests
 
 ```bash
-npm test                                    # all 196+ tests across all packages
+npm test                                    # all tests across all packages
 npm test --workspace=packages/core          # core engine only
-npm test --workspace=packages/cli           # CLI formatters only
+npm test --workspace=packages/types         # types and schema validation only
+npm test --workspace=packages/cli           # CLI commands and formatters
+```
+
+### Type checking
+
+```bash
+npm run typecheck                           # type-check all packages without emitting
 ```
 
 ### Watch mode
@@ -867,15 +924,15 @@ npm run clean    # removes all dist/, *.tsbuildinfo, compiled test files
 ```
 forge/
   packages/
-    types/               @forge-core/types
+    types/               @forge-core/types      — interfaces and Zod runtime schemas
     core/                @forge-core/core
     cli/                 @forge-core/cli
     adapter-claude-code/ @forge-core/adapter-claude-code
+    adapter-codex/       @forge-core/adapter-codex
     adapter-opencode/    @forge-core/adapter-opencode
     verifier-test-runner/@forge-core/verifier-test-runner
     verifier-playwright/ @forge-core/verifier-playwright
-  docs/
-    plans/               architecture design and implementation plan
+  docs/                  architecture design, execution plans, implementation specs
   .forge/                created at runtime (gitignored)
   .env.example           environment variable template
 ```
@@ -883,6 +940,7 @@ forge/
 ### Technical stack
 
 - **TypeScript 6** — strict mode, ESM, NodeNext module resolution
+- **Zod 4** — runtime schema validation for all persisted state and config
 - **tsdown 0.21.7** — ESM build with DTS generation per package (powered by Rolldown)
 - **vitest 4** — testing with workspace configuration
 - **commander 14** — CLI argument parsing
@@ -894,10 +952,11 @@ forge/
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| `@forge-core/types` | 0.1.0 | Shared TypeScript interfaces and type definitions |
+| `@forge-core/types` | 0.1.0 | Shared TypeScript interfaces, Zod runtime schemas, and validation helpers |
 | `@forge-core/core` | 0.1.0 | Core engine: state, tasks, context, reviews, gates |
-| `@forge-core/cli` | 0.1.0 | CLI entry point with 12 commands |
+| `@forge-core/cli` | 0.1.0 | CLI entry point with 14 commands and structured error handling |
 | `@forge-core/adapter-claude-code` | 0.1.0 | Executor adapter for the `claude` CLI |
+| `@forge-core/adapter-codex` | 0.1.0 | Executor adapter for the `codex` CLI |
 | `@forge-core/adapter-opencode` | 0.1.0 | Executor adapter for the `opencode` CLI |
 | `@forge-core/verifier-test-runner` | 0.1.0 | Verifier: runs shell test commands |
 | `@forge-core/verifier-playwright` | 0.1.0 | Verifier: browser-based QA via Playwright |

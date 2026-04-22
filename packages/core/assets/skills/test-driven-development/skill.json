@@ -1,0 +1,15 @@
+{
+  "name": "test-driven-development",
+  "description": "Write the failing test first, then implement the minimum code to pass.",
+  "version": "1.0.0",
+  "phases": ["executing"],
+  "triggers": [
+    { "type": "command", "value": "execute" },
+    { "type": "phase", "value": "executing" }
+  ],
+  "requires": ["incremental-implementation"],
+  "verification": ["A failing test existed before production code was added"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

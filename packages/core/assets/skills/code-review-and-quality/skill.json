@@ -1,0 +1,16 @@
+{
+  "name": "code-review-and-quality",
+  "description": "Review correctness, readability, boundaries, security, and performance.",
+  "version": "1.0.0",
+  "phases": ["reviewing"],
+  "triggers": [
+    { "type": "command", "value": "review" },
+    { "type": "phase", "value": "reviewing" }
+  ],
+  "requires": ["using-forge-skills"],
+  "verification": ["Review findings and verdict are explicit"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true },
+    { "kind": "reference", "path": "checklist.md", "required": false }
+  ]
+}

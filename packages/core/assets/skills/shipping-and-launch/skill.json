@@ -1,0 +1,15 @@
+{
+  "name": "shipping-and-launch",
+  "description": "Verify readiness, risks, and rollback before shipping.",
+  "version": "1.0.0",
+  "phases": ["shipping"],
+  "triggers": [
+    { "type": "command", "value": "ship" },
+    { "type": "phase", "value": "shipping" }
+  ],
+  "requires": ["documentation-and-adrs"],
+  "verification": ["Launch risks and rollback path are known"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

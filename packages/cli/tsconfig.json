@@ -9,6 +9,11 @@
   "include": ["src", "bin"],
   "references": [
     { "path": "../core" },
-    { "path": "../types" }
+    { "path": "../types" },
+    { "path": "../adapter-claude-code" },
+    { "path": "../adapter-codex" },
+    { "path": "../adapter-opencode" },
+    { "path": "../verifier-test-runner" },
+    { "path": "../verifier-playwright" }
   ]
 }

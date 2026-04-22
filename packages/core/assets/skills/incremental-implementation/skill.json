@@ -1,0 +1,15 @@
+{
+  "name": "incremental-implementation",
+  "description": "Implement in small slices and verify each one.",
+  "version": "1.0.0",
+  "phases": ["executing"],
+  "triggers": [
+    { "type": "command", "value": "execute" },
+    { "type": "phase", "value": "executing" }
+  ],
+  "requires": ["using-forge-skills"],
+  "verification": ["Each change set is scoped to the assigned task"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

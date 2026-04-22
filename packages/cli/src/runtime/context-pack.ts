@@ -56,6 +56,39 @@ export function renderContextPack(pack: ContextPack): string {
   lines.push(``)
   lines.push(`## Open Issues`)
   lines.push(pack.sections.open_issues.length > 0 ? pack.sections.open_issues.map((issue) => `- ${issue}`).join('\n') : '- None')
+  lines.push(``)
+  lines.push(`## Active Skills`)
+  if (pack.sections.active_skills.length > 0) {
+    for (const skill of pack.sections.active_skills) {
+      lines.push(`- ${skill.skill_name}: ${skill.reason}`)
+      lines.push(``)
+      lines.push(`### ${skill.skill_name} Instructions`)
+      lines.push(skill.instructions)
+      lines.push(``)
+    }
+  } else {
+    lines.push('- None')
+  }
+  if (pack.sections.persona_overlay) {
+    lines.push(``)
+    lines.push(`## Persona Overlay`)
+    lines.push(`- ${pack.sections.persona_overlay.name} (${pack.sections.persona_overlay.role})`)
+    lines.push(pack.sections.persona_overlay.prompt_overlay)
+  }
+  lines.push(``)
+  lines.push(`## Verification Gates`)
+  lines.push(
+    pack.sections.verification_gates.length > 0
+      ? pack.sections.verification_gates.map((gate) => `- ${gate}`).join('\n')
+      : '- None',
+  )
+  lines.push(``)
+  lines.push(`## Skill References`)
+  lines.push(
+    pack.sections.skill_references.length > 0
+      ? pack.sections.skill_references.map((reference) => `- ${reference}`).join('\n')
+      : '- None',
+  )
 
   return lines.join('\n')
 }

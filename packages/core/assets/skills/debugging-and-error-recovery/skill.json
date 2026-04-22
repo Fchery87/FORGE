@@ -1,0 +1,15 @@
+{
+  "name": "debugging-and-error-recovery",
+  "description": "Reproduce, localize, fix, and guard regressions.",
+  "version": "1.0.0",
+  "phases": ["executing", "reviewing"],
+  "triggers": [
+    { "type": "command", "value": "execute" },
+    { "type": "command", "value": "review" }
+  ],
+  "requires": [],
+  "verification": ["The failure mode is reproduced or covered by a regression test"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

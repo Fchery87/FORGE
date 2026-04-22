@@ -1,0 +1,15 @@
+{
+  "name": "documentation-and-adrs",
+  "description": "Document architectural decisions and why they were made.",
+  "version": "1.0.0",
+  "phases": ["reviewing", "shipping"],
+  "triggers": [
+    { "type": "command", "value": "review" },
+    { "type": "command", "value": "ship" }
+  ],
+  "requires": [],
+  "verification": ["Material architectural changes are documented"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}

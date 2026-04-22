@@ -1,0 +1,6 @@
+{
+  "name": "security-auditor",
+  "role": "executive",
+  "recommended_for": ["review", "ship"],
+  "prompt_overlay": "Prioritize abuse paths, trust boundaries, and secrets or auth regressions."
+}

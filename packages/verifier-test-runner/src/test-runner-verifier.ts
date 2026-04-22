@@ -17,6 +17,18 @@ export interface TestRunnerConfig {
 }
 
 const DEFAULT_TIMEOUT_MS = 60_000
+const UNSAFE_COMMAND_PATTERN = /&&|\|\||[|;<>`]|[$][(]|\r|\n/
+
+function validateCommand(command: string): string {
+  const trimmed = command.trim()
+  if (!trimmed) {
+    throw new Error('TestRunnerVerifier: command must not be empty')
+  }
+  if (UNSAFE_COMMAND_PATTERN.test(trimmed)) {
+    throw new Error('TestRunnerVerifier: command contains unsupported shell control syntax')
+  }
+  return trimmed
+}
 
 export class TestRunnerVerifier implements Verifier {
   readonly name = 'test-runner'
@@ -27,7 +39,7 @@ export class TestRunnerVerifier implements Verifier {
   async initialize(config: VerifierConfig): Promise<void> {
     const opts = config.options as Partial<TestRunnerConfig>
     this.config = {
-      command: opts.command ?? 'npm test',
+      command: validateCommand(opts.command ?? 'npm test'),
       cwd: opts.cwd,
       timeout_ms: opts.timeout_ms ?? DEFAULT_TIMEOUT_MS,
       env: opts.env,
@@ -37,10 +49,6 @@ export class TestRunnerVerifier implements Verifier {
   async verify(plan: VerificationPlan): Promise<VerificationResult> {
     const startTime = Date.now()
     const { command, cwd, timeout_ms = DEFAULT_TIMEOUT_MS, env } = this.config
-
-    if (!command.trim()) {
-      throw new Error('TestRunnerVerifier: command must not be empty')
-    }
 
     const [cmd, ...args] = command.split(/\s+/)
 

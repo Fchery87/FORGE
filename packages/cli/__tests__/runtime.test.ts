@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 vi.mock('@forge-core/adapter-claude-code', () => ({
   ClaudeCodeExecutor: class {
@@ -50,9 +53,13 @@ vi.mock('@forge-core/verifier-playwright', () => ({
   },
 }))
 
-vi.mock('node:fs/promises', () => ({
-  access: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...actual,
+    access: vi.fn().mockResolvedValue(undefined),
+  }
+})
 
 vi.mock('node:child_process', () => ({
   spawnSync: vi.fn().mockReturnValue({ status: 0 }),
@@ -64,6 +71,7 @@ import { install as installCodex } from '@forge-core/adapter-codex'
 import { installHost, inspectHost } from '../src/runtime/host-installer.js'
 import { loadExecutor, loadVerifiers } from '../src/runtime/adapter-loader.js'
 import { runDoctor } from '../src/runtime/doctor.js'
+import { resolveSkillRuntime } from '../src/runtime/skill-runtime.js'
 import { DEFAULT_CONFIG } from '@forge-core/types'
 
 describe('installHost', () => {
@@ -72,20 +80,48 @@ describe('installHost', () => {
   })
 
   it('delegates codex installation to the codex adapter', async () => {
-    const result = await installHost('codex', '/tmp/project')
+    const result = await installHost('codex', '/tmp/project', DEFAULT_CONFIG)
 
-    expect(installCodex).toHaveBeenCalledWith('/tmp/project')
+    expect(installCodex).toHaveBeenCalledWith('/tmp/project', expect.any(Object))
     expect(result.files).toContain('.codex/AGENTS.md')
   })
 
   it('delegates claude-code installation to the claude adapter', async () => {
-    await installHost('claude-code', '/tmp/project')
-    expect(installClaude).toHaveBeenCalledWith('/tmp/project')
+    await installHost('claude-code', '/tmp/project', DEFAULT_CONFIG)
+    expect(installClaude).toHaveBeenCalledWith('/tmp/project', expect.any(Object))
   })
 
   it('delegates opencode installation to the opencode adapter', async () => {
-    await installHost('opencode', '/tmp/project')
-    expect(installOpenCode).toHaveBeenCalledWith('/tmp/project')
+    await installHost('opencode', '/tmp/project', DEFAULT_CONFIG)
+    expect(installOpenCode).toHaveBeenCalledWith('/tmp/project', expect.any(Object))
+  })
+
+  it('generates host content from config and project-local overrides', async () => {
+    const projectDir = await mkdtemp(join(tmpdir(), 'forge-cli-runtime-'))
+    const skillDir = join(projectDir, '.forge', 'skills', 'personas', 'code-reviewer')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'persona.json'), JSON.stringify({
+      name: 'code-reviewer',
+      role: 'executive',
+      recommended_for: ['review'],
+      prompt_overlay: 'Custom project review persona',
+    }), 'utf8')
+
+    await installHost('codex', projectDir, {
+      ...DEFAULT_CONFIG,
+      personas: {
+        ...DEFAULT_CONFIG.personas,
+        default_for_review: 'code-reviewer',
+      },
+    })
+
+    expect(installCodex).toHaveBeenCalledWith(projectDir, expect.objectContaining({
+      commands: expect.objectContaining({
+        'forge-review.md': expect.stringContaining('Custom project review persona'),
+      }),
+    }))
+
+    await rm(projectDir, { recursive: true, force: true })
   })
 })
 
@@ -124,10 +160,27 @@ describe('doctor', () => {
     expect(report.host.installed).toBe(true)
     expect(report.executorBinary.command).toBe('codex')
     expect(report.executorBinary.available).toBe(true)
+    expect(report.skills.count).toBeGreaterThan(0)
   })
 
   it('inspects required files for a host', async () => {
     const result = await inspectHost('codex', '/tmp/project')
     expect(result.files.some((file) => file.path === '.codex/AGENTS.md')).toBe(true)
+  })
+})
+
+describe('security boundaries', () => {
+  it('rejects skill search paths that escape the project root', async () => {
+    const projectDir = await mkdtemp(join(tmpdir(), 'forge-skill-runtime-'))
+
+    await expect(resolveSkillRuntime(projectDir, {
+      ...DEFAULT_CONFIG,
+      skills: {
+        ...DEFAULT_CONFIG.skills,
+        search_paths: ['../outside'],
+      },
+    }, 'review', 'executive', 'reviewing')).rejects.toThrow(/search path/i)
+
+    await rm(projectDir, { recursive: true, force: true })
   })
 })

@@ -1,0 +1,17 @@
+{
+  "name": "using-forge-skills",
+  "description": "Bootstrap Forge workflow skills for each command.",
+  "version": "1.0.0",
+  "phases": ["planning", "executing", "reviewing", "shipping"],
+  "triggers": [
+    { "type": "phase", "value": "planning" },
+    { "type": "phase", "value": "executing" },
+    { "type": "phase", "value": "reviewing" },
+    { "type": "phase", "value": "shipping" }
+  ],
+  "requires": [],
+  "verification": ["Active workflow guidance included in the context pack"],
+  "assets": [
+    { "kind": "instruction", "path": "instruction.md", "required": true }
+  ]
+}
