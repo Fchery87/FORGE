@@ -7,7 +7,10 @@ import type {
   Snapshot,
   SnapshotData,
   OwnerRole,
+  PersonaManifest,
+  SkillActivation,
 } from '@forge-core/types'
+import { parseWithSchema, snapshotSchema } from '@forge-core/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
 
@@ -19,8 +22,19 @@ export class ContextEngine {
   ) {}
 
   // --- Context pack generation ---
+  private static readonly MAX_SKILLS_IN_PACK = 5
+  private static readonly MAX_SKILL_INSTRUCTION_CHARS = 1200
+  private static readonly MAX_SKILL_REFERENCES = 8
 
-  async generateContextPack(role: OwnerRole, taskId?: string): Promise<ContextPack> {
+  async generateContextPack(
+    role: OwnerRole,
+    taskId?: string,
+    options?: {
+      active_skills?: SkillActivation[]
+      persona?: PersonaManifest | null
+      evidence_requirements?: string[]
+    },
+  ): Promise<ContextPack> {
     const [project, execution, architecture, allTasks, allDecisions] = await Promise.all([
       this.stateManager.getProject(),
       this.stateManager.getExecution(),
@@ -58,6 +72,18 @@ export class ContextEngine {
 
     const constraints = task?.constraints ?? []
 
+    const activeSkills = (options?.active_skills ?? [])
+      .slice(0, ContextEngine.MAX_SKILLS_IN_PACK)
+      .map((skill) => ({
+        ...skill,
+        instructions: skill.instructions.length > ContextEngine.MAX_SKILL_INSTRUCTION_CHARS
+          ? `${skill.instructions.slice(0, ContextEngine.MAX_SKILL_INSTRUCTION_CHARS)}\n\n[truncated by Forge skill budget]`
+          : skill.instructions,
+      }))
+    const skillReferences = activeSkills
+      .flatMap((skill) => skill.references.map((reference) => reference.path))
+      .slice(0, ContextEngine.MAX_SKILL_REFERENCES)
+
     const pack: ContextPack = {
       pack_id: `pack-${Date.now()}`,
       generated_at: new Date().toISOString(),
@@ -73,6 +99,10 @@ export class ContextEngine {
         recent_changes: recentChanges,
         open_issues: openIssues,
         state_digest: stateDigest,
+        active_skills: activeSkills,
+        skill_references: skillReferences,
+        persona_overlay: options?.persona ?? null,
+        verification_gates: options?.evidence_requirements ?? [],
       },
     }
 
@@ -193,7 +223,8 @@ export class ContextEngine {
     const raw = await this.stateManager.readRaw(join('snapshots', `${snapshotId}.json`))
     if (!raw) throw new Error(`Snapshot ${snapshotId} not found`)
 
-    const snapshot = JSON.parse(raw) as Snapshot
+    const parsed: unknown = JSON.parse(raw)
+    const snapshot = parseWithSchema(snapshotSchema, parsed, join('snapshots', `${snapshotId}.json`))
     const { data } = snapshot
 
     // Restore all state from snapshot

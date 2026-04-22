@@ -9,6 +9,10 @@ export { ContextEngine } from './context-engine.js'
 export { ReviewEngine } from './review-engine.js'
 export type { ChecklistResult } from './review-engine.js'
 export { Orchestrator } from './orchestrator.js'
+export { SkillRegistry } from './skill-registry.js'
+export { SkillResolver } from './skill-resolver.js'
+export { HookEngine } from './hook-engine.js'
+export { ForgeValidationError } from '@forge-core/types'
 export type {
   ForgeRole,
   ForgeCommand,

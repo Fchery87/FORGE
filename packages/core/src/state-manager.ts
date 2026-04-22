@@ -10,7 +10,21 @@ import type {
   Task,
   Decision,
 } from '@forge-core/types'
-import { DEFAULT_CONFIG } from '@forge-core/types'
+import {
+  DEFAULT_CONFIG,
+  ForgeValidationError,
+  parseWithSchema,
+  forgeConfigSchema,
+  projectStateSchema,
+  architectureStateSchema,
+  executionStateSchema,
+  contextStateSchema,
+  taskSchema,
+  decisionSchema,
+  reviewArtifactSchema,
+  snapshotSchema,
+} from '@forge-core/types'
+import type { ZodType } from 'zod'
 
 export class StateManager {
   private readonly forgeDir: string
@@ -133,11 +147,11 @@ export class StateManager {
 
   async getTask(taskId: string): Promise<Task | null> {
     const path = join(this.forgeDir, 'tasks', `${taskId}.json`)
-    if (!existsSync(path)) return null
-    return this.readJson<Task>(path, null as unknown as Task)
+    return this.readValidatedJson<Task>(path, taskSchema)
   }
 
   async saveTask(task: Task): Promise<void> {
+    parseWithSchema(taskSchema, task, join(this.forgeDir, 'tasks', `${task.task_id}.json`))
     const updated = { ...task, updated_at: new Date().toISOString() }
     await this.writeJson(
       join(this.forgeDir, 'tasks', `${task.task_id}.json`),
@@ -151,7 +165,7 @@ export class StateManager {
     const files = await readdir(tasksDir)
     const tasks: Task[] = []
     for (const file of files.filter(f => f.endsWith('.json'))) {
-      const task = await this.readJson<Task>(join(tasksDir, file), null as unknown as Task)
+      const task = await this.readValidatedJson<Task>(join(tasksDir, file), taskSchema)
       if (task) tasks.push(task)
     }
     return tasks
@@ -161,11 +175,11 @@ export class StateManager {
 
   async getDecision(decisionId: string): Promise<Decision | null> {
     const path = join(this.forgeDir, 'decisions', `${decisionId}.json`)
-    if (!existsSync(path)) return null
-    return this.readJson<Decision>(path, null as unknown as Decision)
+    return this.readValidatedJson<Decision>(path, decisionSchema)
   }
 
   async saveDecision(decision: Decision): Promise<void> {
+    parseWithSchema(decisionSchema, decision, join(this.forgeDir, 'decisions', `${decision.decision_id}.json`))
     await this.writeJson(
       join(this.forgeDir, 'decisions', `${decision.decision_id}.json`),
       decision
@@ -178,7 +192,7 @@ export class StateManager {
     const files = await readdir(dir)
     const decisions: Decision[] = []
     for (const file of files.filter(f => f.endsWith('.json'))) {
-      const d = await this.readJson<Decision>(join(dir, file), null as unknown as Decision)
+      const d = await this.readValidatedJson<Decision>(join(dir, file), decisionSchema)
       if (d) decisions.push(d)
     }
     return decisions
@@ -198,22 +212,75 @@ export class StateManager {
     await this.atomicWrite(path, content)
   }
 
+  // --- Schema map for validated reads ---
+
+  private static readonly schemaMap: Record<string, ZodType> = {
+    'config.json': forgeConfigSchema,
+    'state/project.json': projectStateSchema,
+    'state/architecture.json': architectureStateSchema,
+    'state/execution.json': executionStateSchema,
+    'state/context.json': contextStateSchema,
+  }
+
+  private schemaForPath(filePath: string): ZodType | undefined {
+    const rel = filePath.startsWith(this.forgeDir)
+      ? filePath.slice(this.forgeDir.length + 1)
+      : filePath
+    return StateManager.schemaMap[rel]
+  }
+
+  /**
+   * Read and validate JSON using an explicit schema.
+   * Returns null if file doesn't exist. Throws ForgeValidationError on corrupt/invalid data.
+   */
+  async readValidatedJson<T>(filePath: string, schema: ZodType<T>): Promise<T | null> {
+    const absPath = filePath.startsWith(this.forgeDir) ? filePath : join(this.forgeDir, filePath)
+    if (!existsSync(absPath)) return null
+    const content = await readFile(absPath, 'utf-8')
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(content)
+    } catch (err) {
+      throw new ForgeValidationError(
+        absPath,
+        { message: err instanceof Error ? err.message : String(err), issues: [] } as never,
+        `Corrupt state file at ${absPath}: ${err instanceof Error ? err.message : String(err)}\n` +
+        `Delete the file and re-run \`forge init\` to reset.`,
+      )
+    }
+    return parseWithSchema(schema, parsed, absPath)
+  }
+
   // --- Private helpers ---
 
   private async readJson<T>(filePath: string, defaultValue: T): Promise<T> {
     if (!existsSync(filePath)) return defaultValue
     const content = await readFile(filePath, 'utf-8')
+    let parsed: unknown
     try {
-      return JSON.parse(content) as T
+      parsed = JSON.parse(content)
     } catch (err) {
-      throw new Error(
+      throw new ForgeValidationError(
+        filePath,
+        err instanceof Error
+          ? { message: err.message, issues: [] } as never
+          : ({ message: String(err), issues: [] } as never),
         `Corrupt state file at ${filePath}: ${err instanceof Error ? err.message : String(err)}\n` +
-        `Delete the file and re-run \`forge init\` to reset.`
+        `Delete the file and re-run \`forge init\` to reset.`,
       )
     }
+    const schema = this.schemaForPath(filePath)
+    if (schema) {
+      return parseWithSchema(schema, parsed, filePath) as T
+    }
+    return parsed as T
   }
 
   private async writeJson(filePath: string, data: unknown): Promise<void> {
+    const schema = this.schemaForPath(filePath)
+    if (schema) {
+      parseWithSchema(schema, data, filePath)
+    }
     const content = JSON.stringify(data, null, 2)
     await mkdir(dirname(filePath), { recursive: true })
     await this.atomicWrite(filePath, content)
@@ -278,7 +345,7 @@ export class StateManager {
 }
 
 // Recursively merge b into a, returning a new object. Arrays in b replace arrays in a.
-function deepMerge<T extends Record<string, unknown>>(a: T, b: Partial<T>): T {
+function deepMerge<T extends object>(a: T, b: Partial<T>): T {
   const result = { ...a }
   for (const key of Object.keys(b) as (keyof T)[]) {
     const bVal = b[key]

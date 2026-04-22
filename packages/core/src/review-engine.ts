@@ -6,7 +6,7 @@ import type {
   ReviewType,
   ChecklistItem,
 } from '@forge-core/types'
-import { REVIEW_CHECKLISTS } from '@forge-core/types'
+import { REVIEW_CHECKLISTS, parseWithSchema, reviewArtifactSchema } from '@forge-core/types'
 import type { StateManager } from './state-manager.js'
 import type { IdGenerator } from './id-generator.js'
 
@@ -118,7 +118,8 @@ export class ReviewEngine {
   async getReview(reviewId: string): Promise<ReviewArtifact | null> {
     const raw = await this.stateManager.readRaw(join('reviews', `${reviewId}.json`))
     if (!raw) return null
-    return JSON.parse(raw) as ReviewArtifact
+    const parsed: unknown = JSON.parse(raw)
+    return parseWithSchema(reviewArtifactSchema, parsed, join('reviews', `${reviewId}.json`))
   }
 
   async listReviews(): Promise<ReviewArtifact[]> {
@@ -128,7 +129,15 @@ export class ReviewEngine {
     const reviews: ReviewArtifact[] = []
     for (const file of files.filter(f => f.endsWith('.json'))) {
       const raw = await this.stateManager.readRaw(join('reviews', file))
-      if (raw) reviews.push(JSON.parse(raw) as ReviewArtifact)
+      if (raw) {
+        try {
+          const parsed: unknown = JSON.parse(raw)
+          const review = parseWithSchema(reviewArtifactSchema, parsed, join('reviews', file))
+          reviews.push(review)
+        } catch {
+          // Skip malformed reviews in listing
+        }
+      }
     }
     return reviews
   }

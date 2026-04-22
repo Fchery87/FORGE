@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { StateManager } from '../src/index.js'
+import { StateManager, ForgeValidationError } from '../src/index.js'
 
 let forgeDir: string
 let sm: StateManager
@@ -120,5 +120,72 @@ describe('StateManager atomic write', () => {
     expect(exec.current_wave).toBe(3)
     expect(exec.total_tasks).toBe(10)
     expect(exec.tasks_done).toBe(5)
+  })
+})
+
+describe('StateManager validation', () => {
+  it('rejects invalid config on read', async () => {
+    await writeFile(
+      join(forgeDir, 'config.json'),
+      JSON.stringify({ project: { name: 123 } }),
+    )
+    await expect(sm.getConfig()).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('rejects invalid project state on read', async () => {
+    await writeFile(
+      join(forgeDir, 'state', 'project.json'),
+      JSON.stringify({ current_status: 'bogus' }),
+    )
+    await expect(sm.getProject()).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('rejects invalid task on read', async () => {
+    await writeFile(
+      join(forgeDir, 'tasks', 'TASK-001.json'),
+      JSON.stringify({ task_id: 'TASK-001', status: 'unknown' }),
+    )
+    await expect(sm.getTask('TASK-001')).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('rejects invalid task on write', async () => {
+    const badTask = {
+      task_id: 'TASK-001',
+      title: 'Test',
+      status: 'invalid_status',
+    }
+    await expect(sm.saveTask(badTask as never)).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('rejects invalid execution state on read', async () => {
+    await writeFile(
+      join(forgeDir, 'state', 'execution.json'),
+      JSON.stringify({ phases: 'not-an-array' }),
+    )
+    await expect(sm.getExecution()).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('rejects invalid context state on read', async () => {
+    await writeFile(
+      join(forgeDir, 'state', 'context.json'),
+      JSON.stringify({ session_id: 123 }),
+    )
+    await expect(sm.getContext()).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('returns default values for missing files', async () => {
+    const config = await sm.getConfig()
+    expect(config.adapter.executor).toBe('claude-code')
+
+    const project = await sm.getProject()
+    expect(project.current_status).toBe('intake')
+
+    const execution = await sm.getExecution()
+    expect(execution.phases).toEqual([])
+  })
+
+  it('rejects corrupt JSON with ForgeValidationError', async () => {
+    await writeFile(join(forgeDir, 'config.json'), '{ not valid json }')
+    await expect(sm.getConfig()).rejects.toThrow(ForgeValidationError)
   })
 })

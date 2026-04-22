@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { StateManager, IdGenerator, ReviewEngine } from '../src/index.js'
+import { StateManager, IdGenerator, ReviewEngine, ForgeValidationError } from '../src/index.js'
 import { REVIEW_CHECKLISTS } from '@forge-core/types'
 
 let forgeDir: string
@@ -132,5 +132,27 @@ describe('ReviewEngine.listReviewsForTask', () => {
     const forTask1 = await engine.listReviewsForTask('TASK-001')
     expect(forTask1).toHaveLength(1)
     expect(forTask1[0].task_ids).toContain('TASK-001')
+  })
+})
+
+describe('ReviewEngine validation', () => {
+  it('rejects malformed review artifact on get', async () => {
+    await writeFile(
+      join(forgeDir, 'reviews', 'REV-999.json'),
+      JSON.stringify({ review_id: 'REV-999', verdict: 'maybe' }),
+    )
+    await expect(engine.getReview('REV-999')).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('skips malformed reviews in listing', async () => {
+    await engine.createReview('architecture', [])
+    // Write a malformed review
+    await writeFile(
+      join(forgeDir, 'reviews', 'REV-bad.json'),
+      JSON.stringify({ bad: true }),
+    )
+    const reviews = await engine.listReviews()
+    expect(reviews).toHaveLength(1)
+    expect(reviews[0].review_id).toMatch(/^REV-\d+$/)
   })
 })

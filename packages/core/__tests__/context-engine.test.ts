@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { StateManager, IdGenerator, ContextEngine } from '../src/index.js'
+import { StateManager, IdGenerator, ContextEngine, ForgeValidationError } from '../src/index.js'
 
 let forgeDir: string
 let sm: StateManager
@@ -29,6 +29,8 @@ describe('ContextEngine.generateContextPack', () => {
     expect(pack.target_task).toBeNull()
     expect(pack.estimated_tokens).toBeGreaterThan(0)
     expect(pack.sections.task).toBeNull()
+    expect(pack.sections.active_skills).toEqual([])
+    expect(pack.sections.persona_overlay).toBeNull()
   })
 
   it('generates a scoped pack for a specific task', async () => {
@@ -72,6 +74,31 @@ describe('ContextEngine.generateContextPack', () => {
     await engine.generateContextPack('manager')
     const ctx = await sm.getContext()
     expect(ctx.estimated_tokens_used).toBeGreaterThan(0)
+  })
+
+  it('includes active skills, persona overlays, and verification gates when provided', async () => {
+    await sm.updateProject({ name: 'test-project' })
+    const pack = await engine.generateContextPack('executive', undefined, {
+      active_skills: [
+        {
+          skill_name: 'code-review-and-quality',
+          reason: 'Activated for review',
+          instructions: 'Review findings first.',
+          references: [],
+        },
+      ],
+      persona: {
+        name: 'code-reviewer',
+        role: 'executive',
+        recommended_for: ['review'],
+        prompt_overlay: 'Use a strict review voice.',
+      },
+      evidence_requirements: ['Approved review artifact'],
+    })
+
+    expect(pack.sections.active_skills).toHaveLength(1)
+    expect(pack.sections.persona_overlay?.name).toBe('code-reviewer')
+    expect(pack.sections.verification_gates).toContain('Approved review artifact')
   })
 })
 
@@ -178,5 +205,31 @@ describe('ContextEngine.generateViews', () => {
     await engine.generateViews()
     const content = await readFile(join(forgeDir, 'views', 'STATUS.md'), 'utf-8')
     expect(content).toContain('my-awesome-project')
+  })
+})
+
+describe('ContextEngine snapshot validation', () => {
+  it('rejects restore of malformed snapshot', async () => {
+    // Write a snapshot file with missing fields
+    await sm.updateProject({ name: 'test' })
+    await writeFile(
+      join(forgeDir, 'snapshots', 'SNAP-999.json'),
+      JSON.stringify({ snapshot_id: 'SNAP-999' }),  // missing required fields
+    )
+    await expect(engine.restoreSnapshot('SNAP-999')).rejects.toThrow(ForgeValidationError)
+  })
+
+  it('valid snapshot restore still succeeds', async () => {
+    await sm.updateProject({ name: 'valid-snapshot-test' })
+    const snapshot = await engine.generateSnapshot('valid')
+
+    // Corrupt state
+    await sm.updateProject({ name: 'corrupted' })
+
+    // Restore should work
+    const { snapshot: restored } = await engine.restoreSnapshot(snapshot.snapshot_id)
+    const project = await sm.getProject()
+    expect(project.name).toBe('valid-snapshot-test')
+    expect(restored.snapshot_id).toBe(snapshot.snapshot_id)
   })
 })
