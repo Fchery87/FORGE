@@ -15,6 +15,8 @@ import { register as registerShip } from './commands/ship.js'
 import { register as registerSnapshot } from './commands/snapshot.js'
 import { register as registerRestore } from './commands/restore.js'
 import { register as registerConfig } from './commands/config.js'
+import { register as registerSkills } from './commands/skills.js'
+import { CliError } from './errors.js'
 
 const program = new Command()
 
@@ -29,6 +31,7 @@ program
     const opts = thisCommand.optsWithGlobals()
     setupLogger({ json: opts.json, verbose: opts.verbose })
   })
+  .exitOverride()
 
 // Register all commands
 registerInit(program)
@@ -45,12 +48,13 @@ registerShip(program)
 registerSnapshot(program)
 registerRestore(program)
 registerConfig(program)
+registerSkills(program)
 
 // Unknown command handler
 program.on('command:*', (operands: string[]) => {
   process.stderr.write(`forge: unknown command '${operands[0]}'\n`)
   process.stderr.write("Run 'forge --help' for usage.\n")
-  process.exit(1)
+  process.exitCode = 1
 })
 
 export { program }
@@ -58,3 +62,5 @@ export { resolveForgeDir } from './utils/cli-args.js'
 export { logger, setupLogger } from './utils/logger.js'
 export type { Logger, LogLevel } from './utils/logger.js'
 export type { GlobalOptions } from './utils/cli-args.js'
+export { CliError, CliUsageError, CliPreconditionError, CliNotFoundError, CliStateError, CliValidationError, CliInternalError } from './errors.js'
+export { runCommand } from './command-runner.js'
