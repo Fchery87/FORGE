@@ -203,7 +203,10 @@ Verify the installation:
 ```bash
 forge --version
 forge --help
+forge           # polished welcome / project-aware dashboard
 ```
+
+By default, running `forge` with no subcommand opens a polished landing screen. Outside a Forge project it shows a first-run guide. Inside a directory with `.forge/`, it shows a mini dashboard with project status, progress, and context health.
 
 ### Install Forge into your host agent
 
@@ -260,6 +263,7 @@ Use `intake` to record the outcomes that matter before the agent starts planning
 ### 3. See what Forge knows
 
 ```bash
+forge                    # welcome screen outside a project, mini dashboard inside one
 forge status             # summary view
 forge status --verbose   # includes task details
 forge status --json      # machine-readable output
@@ -891,6 +895,22 @@ npm install
 npm run build
 ```
 
+### Use the local CLI globally during development
+
+```bash
+npm run dev:link
+```
+
+This rebuilds the workspace and refreshes the global `forge` symlink to your local `packages/cli` build. Use it when you want the `forge` command on your machine to reflect your latest local changes.
+
+To go back to the published npm version later:
+
+```bash
+cd packages/cli
+npm unlink -g
+npm install -g @forge-core/cli
+```
+
 ### Run tests
 
 ```bash
@@ -944,7 +964,9 @@ forge/
 - **tsdown 0.21.7** — ESM build with DTS generation per package (powered by Rolldown)
 - **vitest 4** — testing with workspace configuration
 - **commander 14** — CLI argument parsing
-- **kleur** — terminal colors (no stack traces in user-facing errors)
+- **kleur** — terminal colors and visual formatting primitives
+- **ora** — spinners for long-running terminal operations
+- **@clack/prompts** — beautiful prompt primitives for future interactive flows
 
 ---
 

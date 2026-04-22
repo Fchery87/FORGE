@@ -17,6 +17,7 @@ import { register as registerRestore } from './commands/restore.js'
 import { register as registerConfig } from './commands/config.js'
 import { register as registerSkills } from './commands/skills.js'
 import { CliError } from './errors.js'
+import { renderWelcome } from './ui/welcome.js'
 
 const program = new Command()
 
@@ -55,6 +56,12 @@ program.on('command:*', (operands: string[]) => {
   process.stderr.write(`forge: unknown command '${operands[0]}'\n`)
   process.stderr.write("Run 'forge --help' for usage.\n")
   process.exitCode = 1
+})
+
+program.action(async (_, cmd) => {
+  const opts = cmd.optsWithGlobals()
+  setupLogger({ json: opts.json, verbose: opts.verbose })
+  await renderWelcome({ forgeDir: opts.forgeDir, json: opts.json })
 })
 
 export { program }
