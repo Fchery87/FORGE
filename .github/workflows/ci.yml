@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test
+  validate:
+    name: Validate (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -29,6 +29,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Test
         run: npm test
