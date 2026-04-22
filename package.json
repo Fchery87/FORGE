@@ -17,7 +17,9 @@
     "version": "node scripts/version.js"
   },
   "devDependencies": {
+    "@clack/prompts": "^1.2.0",
     "@types/node": "^22.0.0",
+    "ora": "^9.3.0",
     "tsdown": "^0.21.7",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2",

@@ -4,7 +4,7 @@ import {
   StateManager, IdGenerator, ReviewEngine, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
 import { REVIEW_CHECKLISTS } from '@forge-core/types'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
 import { renderContextPack } from '../runtime/context-pack.js'
@@ -97,10 +97,13 @@ export function register(program: Command): void {
           return
         }
 
-        logger.success(`Review ${review.review_id}: ${kleur.bold('APPROVED')}`)
+        ui.header('Review')
+        ui.successBanner(`Review ${review.review_id}: ${kleur.bold('APPROVED')}`)
         for (const taskId of taskIds) {
-          logger.log(`  Task ${taskId} → qa_pending`)
+          ui.kv('Task', `${taskId} → qa_pending`)
         }
+        ui.hint('forge qa — run QA verification')
+        ui.footer()
         return
       }
 
@@ -109,28 +112,30 @@ export function register(program: Command): void {
         return
       }
 
-      logger.log('')
-      logger.log(kleur.bold(`Review: ${reviewType.toUpperCase()}`))
-      logger.log(`Review ID: ${review.review_id}`)
-      if (taskIds.length > 0) {
-        logger.log(`Tasks: ${taskIds.join(', ')}`)
-      }
-      logger.log('─'.repeat(40))
-      logger.log('')
-
-      // Display checklist
+      ui.header('Review')
+      ui.panel(
+        [
+          `Type:      ${reviewType.toUpperCase()}`,
+          `Review ID: ${review.review_id}`,
+          ...(taskIds.length > 0 ? [`Tasks:     ${taskIds.join(', ')}`] : []),
+        ],
+        { title: 'Review Details' },
+      )
+      ui.section('Checklist')
       const checklist = REVIEW_CHECKLISTS[reviewType]
-      logger.log(kleur.bold('Checklist:'))
-      checklist.forEach((item, idx) => {
-        logger.log(`  ${idx + 1}. ${item}`)
+      checklist.forEach((item) => {
+        ui.checkItem(item, true)
       })
-      logger.log('')
 
-      logger.log(kleur.yellow('Review artifact created.'))
-      logger.log(`Review ID: ${kleur.bold(review.review_id)}`)
-      logger.log(`Runtime: ${kleur.bold(`.forge/runtime/${review.review_id}.md`)}`)
-      logger.log('')
-      logger.log('To evaluate this review interactively, use your AI agent with the checklist above.')
-      logger.log(`Or use --pass-all to approve all items (for scripted use).`)
+      ui.panel(
+        [
+          `Review ID: ${kleur.bold(review.review_id)}`,
+          `Runtime:   .forge/runtime/${review.review_id}.md`,
+        ],
+        { title: 'Review Artifact' },
+      )
+      ui.hint('Evaluate this review interactively using your AI agent with the checklist above')
+      ui.hint('Use --pass-all to approve all items (for scripted use)')
+      ui.footer()
     }))
 }

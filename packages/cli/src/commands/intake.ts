@@ -1,7 +1,7 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import { StateManager } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { CliPreconditionError, CliUsageError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -46,12 +46,13 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success('Goal captured')
-      logger.log(`  Goal: ${goal}`)
+      ui.header('Intake')
+      ui.successBanner('Goal captured')
+      ui.kv('Goal', goal)
       if (constraints.length > 0) {
-        logger.log(`  Constraints: ${constraints.join(', ')}`)
+        ui.kv('Constraints', constraints.join(', '))
       }
-      logger.log('')
-      logger.log('Next: forge plan')
+      ui.hint('Next: forge plan')
+      ui.footer()
     }))
 }

@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { existsSync } from 'node:fs'
 import { DEFAULT_CONFIG } from '@forge-core/types'
 import { StateManager } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { installHost, type ForgeHost } from '../runtime/host-installer.js'
 import { CliUsageError } from '../errors.js'
@@ -56,11 +56,13 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success(`Installed Forge host integration for ${selected}`)
-      logger.log(`  Location: ${result.targetDir}`)
-      logger.log('  Files:')
-      for (const file of result.files) {
-        logger.log(`    ${file}`)
-      }
+      ui.header('Install')
+      ui.successBanner(`Installed Forge host integration for ${selected}`)
+      ui.kv('Location', result.targetDir)
+      ui.panel(
+        result.files.map(f => `  ${f}`),
+        { title: 'Files' },
+      )
+      ui.footer()
     }))
 }

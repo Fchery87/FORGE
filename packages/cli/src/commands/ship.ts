@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, ReviewEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
 import { renderContextPack } from '../runtime/context-pack.js'
@@ -71,10 +71,16 @@ export function register(program: Command): void {
         ])
       }
 
+      if (opts.json) {
+        // Skip UI formatting for JSON output
+      } else {
+        ui.header('Ship')
+      }
+
       if (!shipReady && options.force) {
-        logger.warn('Forcing ship with open items:')
+        ui.warnBanner('Forcing ship with open items:')
         for (const f of failures) {
-          logger.warn(`  ${f}`)
+          ui.checkItem(f, false)
         }
       }
 
@@ -112,15 +118,15 @@ export function register(program: Command): void {
         return
       }
 
-      logger.log('')
-      logger.log(kleur.bold('─'.repeat(40)))
-      logger.log(kleur.bold(kleur.green('  FORGE SHIP COMPLETE')))
-      logger.log(kleur.bold('─'.repeat(40)))
-      logger.log('')
-      logger.log(`Project:   ${project.name}`)
-      logger.log(`Tasks:     ${allTasks.filter(t => t.status === 'done').length}/${allTasks.length} done`)
-      logger.log(`Snapshot:  ${snapshot.snapshot_id}`)
-      logger.log('')
-      logger.success('Project shipped successfully.')
+      ui.panel(
+        [
+          `Project:   ${project.name}`,
+          `Tasks:     ${allTasks.filter(t => t.status === 'done').length}/${allTasks.length} done`,
+          `Snapshot:  ${snapshot.snapshot_id}`,
+        ],
+        { title: 'Ship Result' },
+      )
+      ui.successBanner('Project shipped successfully.')
+      ui.footer()
     }))
 }

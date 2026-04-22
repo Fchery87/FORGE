@@ -4,7 +4,8 @@ import {
   StateManager, IdGenerator, ReviewEngine, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
 import type { VerificationPlan, VerificationResult } from '@forge-core/types'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
+import { startSpinner, succeedSpinner, failSpinner } from '../ui/spinner.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
 import { loadVerifiers } from '../runtime/adapter-loader.js'
@@ -70,7 +71,11 @@ export function register(program: Command): void {
         throw new CliStateError('No tasks in qa_pending status', ['Use --task <id> or --full.'])
       }
 
-      logger.info(`Running QA for tasks: ${taskIds.join(', ')}`)
+      if (!opts.json) {
+        ui.header('QA')
+      }
+
+      startSpinner(`Running QA verification for ${taskIds.length} task(s)...`)
 
       // Create QA review artifact
       const qaReview = await reviewEngine.createReview('qa', taskIds)
@@ -91,7 +96,6 @@ export function register(program: Command): void {
           const task = await taskEngine.getTask(taskId).catch(() => null)
           if (task?.status === 'qa_pending') {
             await taskEngine.transition(taskId, 'done')
-            logger.success(`Task ${taskId} → done`)
           }
         }
 
@@ -109,8 +113,10 @@ export function register(program: Command): void {
           return
         }
 
-        logger.success(`QA passed for ${taskIds.length} task(s)`)
-        logger.log('Next: forge ship')
+        succeedSpinner(`QA passed for ${taskIds.length} task(s)`)
+        ui.successBanner(`QA passed for ${taskIds.length} task(s)`)
+        ui.hint('forge ship — ship the project')
+        ui.footer()
       } else {
         const verifiers = await loadVerifiers(config.verification.verifiers)
         const plan: VerificationPlan = {
@@ -138,7 +144,6 @@ export function register(program: Command): void {
             const task = await taskEngine.getTask(taskId).catch(() => null)
             if (task?.status === 'qa_pending') {
               await taskEngine.transition(taskId, 'done')
-              logger.success(`Task ${taskId} → done`)
             }
           }
 
@@ -154,9 +159,17 @@ export function register(program: Command): void {
             return
           }
 
-          logger.success(`QA passed for ${taskIds.length} task(s)`)
-          logger.log(`Evidence: .forge/qa/${plan.plan_id}.json`)
-          logger.log('Next: forge ship')
+          succeedSpinner(`QA passed for ${taskIds.length} task(s)`)
+          ui.panel(
+            [
+              `Tasks:    ${taskIds.length} passed`,
+              `Evidence: .forge/qa/${plan.plan_id}.json`,
+            ],
+            { title: 'QA Result' },
+          )
+          ui.successBanner(`QA passed for ${taskIds.length} task(s)`)
+          ui.hint('forge ship — ship the project')
+          ui.footer()
           return
         }
 
@@ -165,6 +178,7 @@ export function register(program: Command): void {
           throw new CliStateError(`QA ${aggregateStatus}`)
         }
 
+        failSpinner(`QA ${aggregateStatus}`)
         throw new CliStateError(`QA ${aggregateStatus}. Evidence saved to .forge/qa/${plan.plan_id}.json`, [
           `Verifier: ${config.verification.verifiers.map(v => v.name).join(', ')}`,
           `Strategy: ${config.verification.default_strategy.join(', ')}`,

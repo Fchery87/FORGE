@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import { StateManager, IdGenerator } from '@forge-core/core'
 import { DEFAULT_CONFIG } from '@forge-core/types'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { CliPreconditionError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -47,12 +47,12 @@ export function register(program: Command): void {
       if (opts.json) {
         process.stdout.write(JSON.stringify({ initialized: true, forgeDir, name }, null, 2) + '\n')
       } else {
-        logger.success(`Forge project initialized: ${name}`)
-        logger.log(`  Location: ${forgeDir}`)
-        logger.log('')
-        logger.log('Next steps:')
-        logger.log('  forge intake "<your goal>"  — describe what you want to build')
-        logger.log('  forge plan                  — generate tasks from your goal')
+        ui.header('Init')
+        ui.successBanner(`Forge project initialized: ${name}`)
+        ui.kv('Location', forgeDir)
+        ui.hint('forge intake "<your goal>"  — describe what you want to build')
+        ui.hint('forge plan                  — generate tasks from your goal')
+        ui.footer()
       }
     }))
 }

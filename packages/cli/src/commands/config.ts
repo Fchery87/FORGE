@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import type { ForgeConfig } from '@forge-core/types'
 import { StateManager } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { CliPreconditionError, CliUsageError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -54,7 +54,9 @@ export function register(program: Command): void {
         if (opts.json) {
           process.stdout.write(JSON.stringify(config, null, 2) + '\n')
         } else {
-          logger.log(JSON.stringify(config, null, 2))
+          ui.header('Config')
+          ui.panel([JSON.stringify(config, null, 2)])
+          ui.footer()
         }
         return
       }
@@ -68,7 +70,9 @@ export function register(program: Command): void {
         if (opts.json) {
           process.stdout.write(JSON.stringify({ [key]: val }, null, 2) + '\n')
         } else {
-          logger.log(`${key}: ${JSON.stringify(val)}`)
+          ui.header('Config')
+          ui.kv(key, JSON.stringify(val))
+          ui.footer()
         }
         return
       }
@@ -84,7 +88,13 @@ export function register(program: Command): void {
       const parsed = parseValue(value)
       const patch = setNestedValue({}, key, parsed) as Partial<ForgeConfig>
       await sm.updateConfig(patch)
-      logger.success(`Set ${key} = ${JSON.stringify(parsed)}`)
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ [key]: parsed }, null, 2) + '\n')
+      } else {
+        ui.header('Config')
+        ui.successBanner(`Set ${key} = ${JSON.stringify(parsed)}`)
+        ui.footer()
+      }
     }))
 }
 

@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
+import kleur from 'kleur'
 import { StateManager, IdGenerator, ContextEngine } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { CliPreconditionError, CliUsageError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -44,8 +45,22 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success(`Restored snapshot: ${snapshot.snapshot_id}`)
-      logger.log('')
-      logger.log(briefing)
+      ui.header('Restore')
+
+      const labelWidth = 14
+      const kvLine = (label: string, value: string) =>
+        `${kleur.dim(label.padEnd(labelWidth))} ${value}`
+
+      ui.panel([
+        kvLine('Snapshot ID', snapshot.snapshot_id),
+      ], { title: 'Restored' })
+
+      if (briefing) {
+        process.stdout.write('\n')
+        process.stdout.write(briefing + '\n')
+      }
+
+      ui.successBanner('Snapshot restored successfully.')
+      ui.footer()
     }))
 }

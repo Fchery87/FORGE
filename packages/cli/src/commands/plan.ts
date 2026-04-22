@@ -1,7 +1,7 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import { StateManager, IdGenerator, TaskEngine, Orchestrator } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { runCommand } from '../command-runner.js'
 import { CliPreconditionError } from '../errors.js'
@@ -92,11 +92,17 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success(`Plan created: phase "${phaseName}"`)
-      logger.log(`  Task created: ${planTask.task_id} — ${planTask.title}`)
-      logger.log('')
-      logger.log('Next steps:')
-      logger.log('  forge review --arch      — architecture review before execution')
-      logger.log('  forge execute            — start executing tasks')
+      ui.header('Plan')
+      ui.panel(
+        [
+          `Phase: ${phaseName}`,
+        ],
+        { title: 'Phase Details' },
+      )
+      ui.taskCard(planTask)
+      ui.successBanner(`Plan created: phase "${phaseName}"`)
+      ui.hint('forge review --arch — architecture review before execution')
+      ui.hint('forge execute — start executing tasks')
+      ui.footer()
     }))
 }

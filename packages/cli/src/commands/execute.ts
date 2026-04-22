@@ -5,7 +5,8 @@ import {
   StateManager, IdGenerator, TaskEngine, ContextEngine, Orchestrator
 } from '@forge-core/core'
 import type { Task } from '@forge-core/types'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
+import { startSpinner, succeedSpinner, failSpinner } from '../ui/spinner.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
 import { loadExecutor } from '../runtime/adapter-loader.js'
@@ -112,8 +113,12 @@ export function register(program: Command): void {
       // Update project status
       await sm.updateProject({ current_status: 'executing' })
 
+      if (!opts.json) {
+        ui.header('Execute')
+      }
+
       for (const task of tasksToExecute) {
-        logger.info(`Executing task: ${kleur.bold(task.task_id)} — ${task.title}`)
+        startSpinner(`Executing task: ${kleur.bold(task.task_id)} — ${task.title}`)
 
         // Transition to in_progress (planned → ready → in_progress)
         if (task.status === 'planned') {
@@ -134,12 +139,11 @@ export function register(program: Command): void {
         })
         const renderedPack = renderContextPack(pack)
         await sm.writeRaw(join('runtime', `${task.task_id}.md`), renderedPack)
-        logger.debug(`Context pack: ${pack.pack_id} (~${pack.estimated_tokens} tokens)`)
 
         // Check budget
         const budget = await ctxEngine.checkBudget()
         if (budget.warning_active) {
-          logger.warn(budget.recommendation ?? 'Context budget warning')
+          ui.warnBanner(budget.recommendation ?? 'Context budget warning')
         }
 
         const result = await executor.dispatch({
@@ -180,16 +184,20 @@ export function register(program: Command): void {
           continue
         }
 
-        logger.log('')
-        logger.log(kleur.bold('Executor Result'))
-        logger.log(`  Task:       ${updatedTask.task_id}`)
-        logger.log(`  Executor:   ${executor.name}`)
-        logger.log(`  Status:     ${result.status}`)
-        logger.log(`  Summary:    ${result.summary}`)
-        logger.log(`  Runtime:    .forge/runtime/${task.task_id}.md`)
-        logger.log('')
-        logger.log(`Next: run \`forge merge --task ${task.task_id}\` when the result is ready for review`)
-        logger.log('')
+        succeedSpinner(`Task ${task.task_id} completed`)
+
+        ui.panel(
+          [
+            `Task:       ${updatedTask.task_id}`,
+            `Executor:   ${executor.name}`,
+            `Status:     ${result.status}`,
+            `Summary:    ${result.summary}`,
+            `Runtime:    .forge/runtime/${task.task_id}.md`,
+          ],
+          { title: 'Executor Result' },
+        )
+        ui.hint(`forge merge --task ${task.task_id} — merge result into project`)
+        ui.footer()
       }
 
       await executor.dispose()

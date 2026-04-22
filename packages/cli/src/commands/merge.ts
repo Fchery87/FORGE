@@ -3,9 +3,8 @@ import { existsSync } from 'node:fs'
 import {
   StateManager, IdGenerator, TaskEngine, GateKeeper, ContextEngine, Orchestrator
 } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
-import kleur from 'kleur'
 import { runCommand } from '../command-runner.js'
 import { CliPreconditionError, CliNotFoundError, CliStateError } from '../errors.js'
 
@@ -69,10 +68,16 @@ export function register(program: Command): void {
         ])
       }
 
+      if (opts.json) {
+        // Skip UI formatting for JSON output
+      } else {
+        ui.header('Merge')
+      }
+
       if (!gate.allowed && options.force) {
-        logger.warn('GateKeeper override: forcing merge despite unmet conditions')
+        ui.warnBanner('GateKeeper override: forcing merge despite unmet conditions')
         for (const reason of gate.reasons) {
-          logger.warn(`  ${reason}`)
+          ui.checkItem(reason, false)
         }
       }
 
@@ -94,7 +99,6 @@ export function register(program: Command): void {
       const config = await sm.getConfig()
       if (config.context.auto_digest_on_merge) {
         const digest = await ctxEngine.generateDigest('state')
-        logger.debug(`State digest: ${digest.content}`)
       }
 
       // Regenerate views
@@ -111,9 +115,15 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success(`Task ${taskId} submitted for review`)
-      logger.log(`  Status: in_review`)
-      logger.log('')
-      logger.log('Next: forge review')
+      ui.panel(
+        [
+          `Task:   ${taskId}`,
+          `Status: ${ui.badge('in_review')}`,
+        ],
+        { title: 'Merge Result' },
+      )
+      ui.successBanner(`Task ${taskId} submitted for review`)
+      ui.hint('forge review — review the merged task')
+      ui.footer()
     }))
 }

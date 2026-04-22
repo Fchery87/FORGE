@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
+import kleur from 'kleur'
 import { StateManager, IdGenerator, ContextEngine } from '@forge-core/core'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { CliPreconditionError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -25,23 +26,37 @@ export function register(program: Command): void {
       const ctxEngine = new ContextEngine(sm, gen, forgeDir)
 
       if (options.list) {
-        // List snapshots
+        if (opts.json) {
+          const { readdir } = await import('node:fs/promises')
+          const snapshotsDir = `${forgeDir}/snapshots`
+          const snapshots = existsSync(snapshotsDir)
+            ? (await readdir(snapshotsDir)).filter(f => f.endsWith('.json'))
+            : []
+          process.stdout.write(JSON.stringify({ snapshots: snapshots.map(f => f.replace('.json', '')) }, null, 2) + '\n')
+          return
+        }
+
+        ui.header('Snapshot')
+
         const { readdir } = await import('node:fs/promises')
         const snapshotsDir = `${forgeDir}/snapshots`
         if (!existsSync(snapshotsDir)) {
-          logger.log('No snapshots found.')
+          ui.hint('No snapshots found.')
+          ui.footer()
           return
         }
         const files = await readdir(snapshotsDir)
         const snapshots = files.filter(f => f.endsWith('.json'))
         if (snapshots.length === 0) {
-          logger.log('No snapshots found.')
+          ui.hint('No snapshots found.')
+          ui.footer()
           return
         }
-        logger.log('Available snapshots:')
+
         for (const f of snapshots) {
-          logger.log(`  ${f.replace('.json', '')}`)
+          process.stdout.write(`  ${kleur.dim('•')} ${f.replace('.json', '')}\n`)
         }
+        ui.footer()
         return
       }
 
@@ -52,10 +67,21 @@ export function register(program: Command): void {
         return
       }
 
-      logger.success(`Snapshot saved: ${snapshot.snapshot_id}`)
-      if (snapshot.label) logger.log(`  Label: ${snapshot.label}`)
-      logger.log(`  Created: ${snapshot.created_at}`)
-      logger.log('')
-      logger.log('To restore: forge restore --snapshot ' + snapshot.snapshot_id)
+      ui.header('Snapshot')
+
+      const labelWidth = 14
+      const kvLine = (label: string, value: string) =>
+        `${kleur.dim(label.padEnd(labelWidth))} ${value}`
+
+      const lines: string[] = [
+        kvLine('Snapshot ID', snapshot.snapshot_id),
+      ]
+      if (snapshot.label) lines.push(kvLine('Label', snapshot.label))
+      lines.push(kvLine('Created', snapshot.created_at))
+
+      ui.panel(lines, { title: 'Saved' })
+      ui.hint(`Restore with: forge restore --snapshot ${snapshot.snapshot_id}`)
+      ui.successBanner('Snapshot saved successfully.')
+      ui.footer()
     }))
 }

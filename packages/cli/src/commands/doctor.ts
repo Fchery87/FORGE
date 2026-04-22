@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { existsSync } from 'node:fs'
 import { StateManager } from '@forge-core/core'
 import { DEFAULT_CONFIG } from '@forge-core/types'
-import { logger } from '../utils/logger.js'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { runDoctor } from '../runtime/doctor.js'
 import { runCommand } from '../command-runner.js'
@@ -28,16 +28,16 @@ export function register(program: Command): void {
         return
       }
 
-      logger.log('Forge Doctor')
-      logger.log(`  Host: ${report.host.host}`)
-      logger.log(`  Host installed: ${report.host.installed ? 'yes' : 'no'}`)
+      ui.header('Doctor')
+      ui.checkItem(`Host: ${report.host.host}`, report.host.installed)
       for (const file of report.host.files) {
-        logger.log(`    ${file.present ? '✓' : '✗'} ${file.path}`)
+        ui.checkItem(file.path, file.present)
       }
-      logger.log(`  Executor binary: ${report.executorBinary.command}`)
-      logger.log(`  Binary available: ${report.executorBinary.available ? 'yes' : 'no'}`)
-      logger.log(`  Skills loaded: ${report.skills.count}`)
-      logger.log(`  Personas loaded: ${report.skills.personas}`)
-      logger.log(`  Hooks loaded: ${report.skills.hooks}`)
+      ui.checkItem(`Executor binary: ${report.executorBinary.command}`, report.executorBinary.available)
+      ui.section('Inventory')
+      ui.kv('Skills', String(report.skills.count))
+      ui.kv('Personas', String(report.skills.personas))
+      ui.kv('Hooks', String(report.skills.hooks))
+      ui.footer()
     }))
 }

@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DEFAULT_CONFIG } from '@forge-core/types'
 import { SkillRegistry, StateManager } from '@forge-core/core'
+import kleur from 'kleur'
+import * as ui from '../ui/format.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
-import { logger } from '../utils/logger.js'
 import { resolveSearchPathsWithinProject } from '../runtime/trust-boundaries.js'
 import { CliNotFoundError } from '../errors.js'
 import { runCommand } from '../command-runner.js'
@@ -37,10 +38,16 @@ export function register(program: Command): void {
         return
       }
 
+      ui.header('Skills')
+
       for (const skill of skills) {
-        logger.log(`${skill.name} [${skill.source}]`)
-        logger.log(`  ${skill.description}`)
+        const name = kleur.bold(skill.name)
+        const source = kleur.dim(`[${skill.source}]`)
+        process.stdout.write(`  ${name} ${source}\n`)
+        process.stdout.write(`    ${kleur.dim(skill.description)}\n`)
       }
+
+      ui.footer()
     }))
 
   command
@@ -67,10 +74,22 @@ export function register(program: Command): void {
         return
       }
 
-      logger.log(`${skill.manifest.name} [${skill.source}]`)
-      logger.log(skill.manifest.description)
-      logger.log(`Phases: ${skill.manifest.phases.join(', ')}`)
-      logger.log(`Triggers: ${skill.manifest.triggers.map((trigger) => `${trigger.type}:${trigger.value}`).join(', ')}`)
-      logger.log(`Verification: ${skill.manifest.verification.join('; ') || 'None'}`)
+      ui.header('Skills')
+
+      const labelWidth = 14
+      const kvLine = (label: string, value: string) =>
+        `${kleur.dim(label.padEnd(labelWidth))} ${value}`
+
+      const lines: string[] = [
+        kvLine('Name', skill.manifest.name),
+        kvLine('Source', skill.source),
+        kvLine('Description', skill.manifest.description),
+        kvLine('Phases', skill.manifest.phases.join(', ')),
+        kvLine('Triggers', skill.manifest.triggers.map((t) => `${t.type}:${t.value}`).join(', ')),
+        kvLine('Verification', skill.manifest.verification.join('; ') || 'None'),
+      ]
+
+      ui.panel(lines, { title: skill.manifest.name })
+      ui.footer()
     }))
 }
