@@ -6,19 +6,23 @@ import {
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
+import { renderContextPack } from '../runtime/context-pack.js'
+import { resolveSkillRuntime } from '../runtime/skill-runtime.js'
+import { join } from 'node:path'
+import { runCommand } from '../command-runner.js'
+import { CliPreconditionError, CliStateError } from '../errors.js'
 
 export function register(program: Command): void {
   program
     .command('ship')
     .description('Validate ship readiness and produce release report')
     .option('--force', 'Force ship even with open items')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -28,13 +32,17 @@ export function register(program: Command): void {
       // Precondition check
       const pre = orch.checkPreconditions('ship', project.current_status)
       if (!pre.met && !options.force) {
-        logger.error(pre.reason ?? 'Precondition not met')
-        process.exit(1)
+        throw new CliPreconditionError(pre.reason ?? 'Precondition not met')
       }
 
       const gen = new IdGenerator(sm)
       const reviewEngine = new ReviewEngine(sm, gen, forgeDir)
       const ctxEngine = new ContextEngine(sm, gen, forgeDir)
+      const config = await sm.getConfig()
+      const runtime = await resolveSkillRuntime(process.cwd(), config, 'ship', 'executive', project.current_status)
+      if (runtime.blockingReason) {
+        throw new CliPreconditionError(runtime.blockingReason)
+      }
 
       const [allTasks, allReviews] = await Promise.all([
         sm.listTasks(),
@@ -57,13 +65,10 @@ export function register(program: Command): void {
       const shipReady = failures.length === 0
 
       if (!shipReady && !options.force) {
-        logger.error('Ship gate failed:')
-        for (const f of failures) {
-          logger.log(`  ${kleur.red('✗')} ${f}`)
-        }
-        logger.log('')
-        logger.log('Fix the issues above or use --force to override (not recommended).')
-        process.exit(1)
+        throw new CliStateError('Ship gate failed', [
+          ...failures,
+          'Fix the issues above or use --force to override (not recommended).',
+        ])
       }
 
       if (!shipReady && options.force) {
@@ -75,6 +80,12 @@ export function register(program: Command): void {
 
       // Create ship review
       const shipReview = await reviewEngine.createReview('ship', [])
+      const pack = await ctxEngine.generateContextPack('executive', undefined, {
+        active_skills: runtime.skills,
+        persona: runtime.persona,
+        evidence_requirements: [...runtime.evidenceRequirements, ...failures],
+      })
+      await sm.writeRaw(join('runtime', `${shipReview.review_id}.md`), renderContextPack(pack))
       const allPassed = shipReview.checklist.map((_, idx) => ({ item_index: idx, passed: shipReady }))
       await reviewEngine.evaluateChecklist(shipReview.review_id, allPassed, {
         findings: failures,
@@ -111,5 +122,5 @@ export function register(program: Command): void {
       logger.log(`Snapshot:  ${snapshot.snapshot_id}`)
       logger.log('')
       logger.success('Project shipped successfully.')
-    })
+    }))
 }

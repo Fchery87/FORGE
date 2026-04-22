@@ -6,6 +6,8 @@ import {
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
+import { runCommand } from '../command-runner.js'
+import { CliPreconditionError, CliNotFoundError, CliStateError } from '../errors.js'
 
 export function register(program: Command): void {
   program
@@ -13,13 +15,12 @@ export function register(program: Command): void {
     .description('Merge completed task results into project state')
     .option('--task <id>', 'Task ID to merge')
     .option('--force', 'Force merge even if GateKeeper conditions are not met')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -29,8 +30,7 @@ export function register(program: Command): void {
       // Precondition check
       const pre = orch.checkPreconditions('merge', project.current_status)
       if (!pre.met) {
-        logger.error(pre.reason ?? 'Precondition not met')
-        process.exit(1)
+        throw new CliPreconditionError(pre.reason ?? 'Precondition not met')
       }
 
       const gen = new IdGenerator(sm)
@@ -45,34 +45,28 @@ export function register(program: Command): void {
         const allTasks = await sm.listTasks()
         const candidate = allTasks.find(t => t.status === 'in_progress')
         if (!candidate) {
-          logger.error('No in-progress task found. Specify --task <id>.')
-          process.exit(1)
+          throw new CliNotFoundError('No in-progress task found. Specify --task <id>.')
         }
         taskId = candidate.task_id
       }
 
       const task = await engine.getTask(taskId).catch(() => null)
       if (!task) {
-        logger.error(`Task ${taskId} not found`)
-        process.exit(1)
+        throw new CliNotFoundError(`Task ${taskId} not found`)
       }
 
       if (!['in_progress', 'in_review'].includes(task.status)) {
-        logger.error(`Task ${taskId} is in status '${task.status}'. Only in_progress or in_review tasks can be merged.`)
-        process.exit(1)
+        throw new CliStateError(`Task ${taskId} is in status '${task.status}'. Only in_progress or in_review tasks can be merged.`)
       }
 
       // GateKeeper check for in_review transition
       const gate = gk.canSubmitForReview(task)
       if (!gate.allowed && !options.force) {
-        logger.warn(`GateKeeper: task not ready for review`)
-        for (const reason of gate.reasons) {
-          logger.log(`  ${kleur.red('✗')} ${reason}`)
-        }
-        logger.log('')
-        logger.log('Use --force to override gate (not recommended).')
-        logger.log('Or update the task\'s test_requirements and acceptance_criteria first.')
-        process.exit(1)
+        throw new CliStateError('GateKeeper: task not ready for review', [
+          ...gate.reasons,
+          'Use --force to override gate (not recommended).',
+          "Or update the task's test_requirements and acceptance_criteria first.",
+        ])
       }
 
       if (!gate.allowed && options.force) {
@@ -121,5 +115,5 @@ export function register(program: Command): void {
       logger.log(`  Status: in_review`)
       logger.log('')
       logger.log('Next: forge review')
-    })
+    }))
 }

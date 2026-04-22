@@ -1,8 +1,11 @@
 import type { Command } from 'commander'
 import { existsSync } from 'node:fs'
+import type { ForgeConfig } from '@forge-core/types'
 import { StateManager } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { CliPreconditionError, CliUsageError } from '../errors.js'
+import { runCommand } from '../command-runner.js'
 
 // Known top-level config keys that can be set via CLI
 const KNOWN_KEYS = new Set([
@@ -18,6 +21,15 @@ const KNOWN_KEYS = new Set([
   'review.require_architecture_review',
   'review.require_qa_before_ship',
   'review.auto_review_on_merge',
+  'skills.enabled',
+  'skills.search_paths',
+  'skills.auto_activate',
+  'skills.phase_defaults',
+  'skills.builtins',
+  'personas.enabled',
+  'personas.default_for_review',
+  'hooks.enabled',
+  'hooks.fail_on_error',
 ])
 
 export function register(program: Command): void {
@@ -26,13 +38,12 @@ export function register(program: Command): void {
     .description('View or update Forge configuration')
     .argument('[key]', 'Config key (e.g., adapter.executor)')
     .argument('[value]', 'Value to set')
-    .action(async (key: string | undefined, value: string | undefined, cmd) => {
+    .action(runCommand(async (key: string | undefined, value: string | undefined, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -52,8 +63,7 @@ export function register(program: Command): void {
         // Print specific key value
         const val = getNestedValue(config, key)
         if (val === undefined) {
-          logger.warn(`Unknown key: ${key}`)
-          process.exit(1)
+          throw new CliUsageError(`Unknown key: ${key}`)
         }
         if (opts.json) {
           process.stdout.write(JSON.stringify({ [key]: val }, null, 2) + '\n')
@@ -65,20 +75,20 @@ export function register(program: Command): void {
 
       // Set a value
       if (!KNOWN_KEYS.has(key)) {
-        logger.warn(`Unknown config key: ${key}`)
-        logger.log('Known keys:')
-        for (const k of KNOWN_KEYS) logger.log(`  ${k}`)
-        process.exit(1)
+        throw new CliUsageError(
+          `Unknown config key: ${key}`,
+          ['Known keys:', ...Array.from(KNOWN_KEYS).map(k => `  ${k}`)],
+        )
       }
 
       const parsed = parseValue(value)
-      const patch = setNestedValue({}, key, parsed)
+      const patch = setNestedValue({}, key, parsed) as Partial<ForgeConfig>
       await sm.updateConfig(patch)
       logger.success(`Set ${key} = ${JSON.stringify(parsed)}`)
-    })
+    }))
 }
 
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+function getNestedValue(obj: unknown, path: string): unknown {
   const parts = path.split('.')
   let current: unknown = obj
   for (const part of parts) {
@@ -88,7 +98,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return current
 }
 
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): unknown {
   const parts = path.split('.')
   if (parts.length === 1) {
     return { [path]: value }
@@ -103,6 +113,13 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
 }
 
 function parseValue(value: string): unknown {
+  if ((value.startsWith('[') && value.endsWith(']')) || (value.startsWith('{') && value.endsWith('}'))) {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
   if (value === 'true') return true
   if (value === 'false') return false
   const num = Number(value)

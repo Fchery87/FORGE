@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs'
 import { StateManager, IdGenerator, ContextEngine } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { CliPreconditionError } from '../errors.js'
+import { runCommand } from '../command-runner.js'
 import kleur from 'kleur'
 
 export function register(program: Command): void {
@@ -10,13 +12,12 @@ export function register(program: Command): void {
     .command('status')
     .description('Show current project status and task health')
     .option('--verbose', 'Show task details')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -75,7 +76,7 @@ export function register(program: Command): void {
         }
       }
       logger.log('')
-    })
+    }))
 }
 
 function colorStatus(status: string): string {

@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs'
 import { StateManager, IdGenerator, ContextEngine } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { CliPreconditionError } from '../errors.js'
+import { runCommand } from '../command-runner.js'
 
 export function register(program: Command): void {
   program
@@ -10,13 +12,12 @@ export function register(program: Command): void {
     .description('Save a snapshot of current project state')
     .option('--name <label>', 'Label for the snapshot')
     .option('--list', 'List available snapshots')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -56,5 +57,5 @@ export function register(program: Command): void {
       logger.log(`  Created: ${snapshot.created_at}`)
       logger.log('')
       logger.log('To restore: forge restore --snapshot ' + snapshot.snapshot_id)
-    })
+    }))
 }

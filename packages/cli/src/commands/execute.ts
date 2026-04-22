@@ -10,6 +10,9 @@ import { resolveForgeDir } from '../utils/cli-args.js'
 import kleur from 'kleur'
 import { loadExecutor } from '../runtime/adapter-loader.js'
 import { renderContextPack } from '../runtime/context-pack.js'
+import { resolveSkillRuntime } from '../runtime/skill-runtime.js'
+import { runCommand } from '../command-runner.js'
+import { CliPreconditionError, CliNotFoundError, CliStateError } from '../errors.js'
 
 function updateAcceptanceCriteria(task: Task, result: NonNullable<Task['result']>): Task['acceptance_criteria'] {
   return task.acceptance_criteria.map((criterion) => {
@@ -51,13 +54,12 @@ export function register(program: Command): void {
     .description('Execute the next ready task (or specified task)')
     .option('--task <id>', 'Specific task ID to execute')
     .option('--wave', 'Execute all ready tasks in parallel')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -67,14 +69,14 @@ export function register(program: Command): void {
       // Precondition check
       const pre = orch.checkPreconditions('execute', project.current_status)
       if (!pre.met) {
-        logger.error(pre.reason ?? 'Precondition not met')
-        process.exit(1)
+        throw new CliPreconditionError(pre.reason ?? 'Precondition not met')
       }
 
       const gen = new IdGenerator(sm)
       const engine = new TaskEngine(sm, gen)
       const ctxEngine = new ContextEngine(sm, gen, forgeDir)
       const config = await sm.getConfig()
+      const projectRoot = process.cwd()
       const executor = await loadExecutor({
         name: config.adapter.executor,
         options: config.adapter.executor_options,
@@ -85,8 +87,7 @@ export function register(program: Command): void {
       if (options.task) {
         const task = await engine.getTask(options.task).catch(() => null)
         if (!task) {
-          logger.error(`Task ${options.task} not found`)
-          process.exit(1)
+          throw new CliNotFoundError(`Task ${options.task} not found`)
         }
         tasksToExecute = [task]
       } else if (options.wave) {
@@ -94,16 +95,16 @@ export function register(program: Command): void {
       } else {
         const ready = await engine.getReadyTasks()
         if (ready.length === 0) {
-          logger.warn('No ready tasks found. Check task dependencies and statuses.')
+          const details: string[] = ['Check task dependencies and statuses.']
           const allTasks = await sm.listTasks()
           const planned = allTasks.filter(t => t.status === 'planned' || t.status === 'ready')
           if (planned.length > 0) {
-            logger.log('Planned tasks (may have unmet dependencies):')
+            details.push('Planned tasks (may have unmet dependencies):')
             for (const t of planned) {
-              logger.log(`  ${t.task_id}: ${t.title} (deps: ${t.dependencies.join(', ') || 'none'})`)
+              details.push(`  ${t.task_id}: ${t.title} (deps: ${t.dependencies.join(', ') || 'none'})`)
             }
           }
-          process.exit(1)
+          throw new CliStateError('No ready tasks found', details)
         }
         tasksToExecute = [ready[0]]
       }
@@ -121,7 +122,16 @@ export function register(program: Command): void {
         await engine.transition(task.task_id, 'in_progress')
 
         // Generate context pack
-        const pack = await ctxEngine.generateContextPack('builder', task.task_id)
+        const runtime = await resolveSkillRuntime(projectRoot, config, 'execute', 'builder', project.current_status)
+        if (runtime.blockingReason) {
+          throw new CliPreconditionError(runtime.blockingReason)
+        }
+
+        const pack = await ctxEngine.generateContextPack('builder', task.task_id, {
+          active_skills: runtime.skills,
+          persona: runtime.persona,
+          evidence_requirements: runtime.evidenceRequirements,
+        })
         const renderedPack = renderContextPack(pack)
         await sm.writeRaw(join('runtime', `${task.task_id}.md`), renderedPack)
         logger.debug(`Context pack: ${pack.pack_id} (~${pack.estimated_tokens} tokens)`)
@@ -140,6 +150,9 @@ export function register(program: Command): void {
             content: renderedPack,
           },
           working_directory: process.cwd(),
+          active_skills: pack.sections.active_skills,
+          persona: pack.sections.persona_overlay,
+          evidence_requirements: pack.sections.verification_gates,
         })
 
         const updatedTask = await engine.updateTask(task.task_id, {
@@ -186,5 +199,5 @@ export function register(program: Command): void {
       const taskIds = tasksToExecute.map(t => t.task_id).join(', ')
       const actions = [...ctx.recent_actions.slice(-19), `execute: dispatched ${taskIds}`]
       await sm.updateContext({ recent_actions: actions })
-    })
+    }))
 }

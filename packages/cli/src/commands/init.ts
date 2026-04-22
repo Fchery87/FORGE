@@ -4,6 +4,8 @@ import { StateManager, IdGenerator } from '@forge-core/core'
 import { DEFAULT_CONFIG } from '@forge-core/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { CliPreconditionError } from '../errors.js'
+import { runCommand } from '../command-runner.js'
 
 export function register(program: Command): void {
   program
@@ -11,13 +13,12 @@ export function register(program: Command): void {
     .description('Initialize a new Forge project in the current directory')
     .option('--name <name>', 'Project name')
     .option('--description <desc>', 'Project description')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (existsSync(forgeDir)) {
-        logger.warn('.forge/ already exists. Run `forge status` to see project state.')
-        process.exit(1)
+        throw new CliPreconditionError('.forge/ already exists. Run `forge status` to see project state.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -53,5 +54,5 @@ export function register(program: Command): void {
         logger.log('  forge intake "<your goal>"  — describe what you want to build')
         logger.log('  forge plan                  — generate tasks from your goal')
       }
-    })
+    }))
 }

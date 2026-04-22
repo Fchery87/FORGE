@@ -6,12 +6,13 @@ import { DEFAULT_CONFIG } from '@forge-core/types'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
 import { runDoctor } from '../runtime/doctor.js'
+import { runCommand } from '../command-runner.js'
 
 export function register(program: Command): void {
   program
     .command('doctor')
     .description('Validate Forge host integration and executor availability')
-    .action(async (_options, cmd) => {
+    .action(runCommand(async (_options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
       const projectDir = existsSync(forgeDir) ? dirname(forgeDir) : process.cwd()
@@ -35,5 +36,8 @@ export function register(program: Command): void {
       }
       logger.log(`  Executor binary: ${report.executorBinary.command}`)
       logger.log(`  Binary available: ${report.executorBinary.available ? 'yes' : 'no'}`)
-    })
+      logger.log(`  Skills loaded: ${report.skills.count}`)
+      logger.log(`  Personas loaded: ${report.skills.personas}`)
+      logger.log(`  Hooks loaded: ${report.skills.hooks}`)
+    }))
 }

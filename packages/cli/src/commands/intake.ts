@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs'
 import { StateManager } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { CliPreconditionError, CliUsageError } from '../errors.js'
+import { runCommand } from '../command-runner.js'
 
 export function register(program: Command): void {
   program
@@ -10,18 +12,16 @@ export function register(program: Command): void {
     .description('Capture project goal and scope')
     .argument('[goal]', 'Goal or objective to build')
     .option('--constraints <constraints>', 'Comma-separated constraints')
-    .action(async (goal: string | undefined, options, cmd) => {
+    .action(runCommand(async (goal: string | undefined, options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       if (!goal) {
-        logger.error('Please provide a goal: forge intake "<your goal>"')
-        process.exit(1)
+        throw new CliUsageError('Please provide a goal: forge intake "<your goal>"')
       }
 
       const sm = new StateManager(forgeDir)
@@ -53,5 +53,5 @@ export function register(program: Command): void {
       }
       logger.log('')
       logger.log('Next: forge plan')
-    })
+    }))
 }

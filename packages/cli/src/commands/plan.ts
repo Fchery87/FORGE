@@ -3,19 +3,20 @@ import { existsSync } from 'node:fs'
 import { StateManager, IdGenerator, TaskEngine, Orchestrator } from '@forge-core/core'
 import { logger } from '../utils/logger.js'
 import { resolveForgeDir } from '../utils/cli-args.js'
+import { runCommand } from '../command-runner.js'
+import { CliPreconditionError } from '../errors.js'
 
 export function register(program: Command): void {
   program
     .command('plan')
     .description('Generate execution plan from intake goal')
     .option('--phase <name>', 'Phase name', 'phase-1')
-    .action(async (options, cmd) => {
+    .action(runCommand(async (options, cmd) => {
       const opts = cmd.optsWithGlobals()
       const forgeDir = resolveForgeDir(opts.forgeDir)
 
       if (!existsSync(forgeDir)) {
-        logger.error('No .forge/ directory found. Run `forge init` first.')
-        process.exit(1)
+        throw new CliPreconditionError('No .forge/ directory found. Run `forge init` first.')
       }
 
       const sm = new StateManager(forgeDir)
@@ -25,9 +26,7 @@ export function register(program: Command): void {
       // Precondition check
       const pre = orch.checkPreconditions('plan', project.current_status)
       if (!pre.met) {
-        logger.error(pre.reason ?? 'Precondition not met')
-        logger.log('Run `forge intake "<goal>"` first.')
-        process.exit(1)
+        throw new CliPreconditionError(pre.reason ?? 'Precondition not met', ['Run `forge intake "<goal>"` first.'])
       }
 
       const gen = new IdGenerator(sm)
@@ -99,5 +98,5 @@ export function register(program: Command): void {
       logger.log('Next steps:')
       logger.log('  forge review --arch      — architecture review before execution')
       logger.log('  forge execute            — start executing tasks')
-    })
+    }))
 }
