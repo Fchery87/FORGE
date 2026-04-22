@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type TaskStatus =
   | 'draft'
   | 'planned'
@@ -104,3 +106,91 @@ export interface ExecutorResult {
   issues: string[]
   merge_recommendation: 'merge' | 'revise' | 'reject'
 }
+
+// --- Runtime schemas ---
+
+export const taskStatusSchema = z.enum([
+  'draft', 'planned', 'ready', 'in_progress',
+  'blocked', 'in_review', 'qa_pending', 'done', 'rejected',
+])
+
+export const ownerRoleSchema = z.enum(['builder', 'manager', 'executive'])
+
+export const acceptanceCriterionSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  verified: z.boolean(),
+  evidence_ref: z.string().nullable(),
+})
+
+export const testTypeSchema = z.enum(['unit', 'integration', 'e2e'])
+export const testStatusSchema = z.enum(['pending', 'written', 'passing', 'failing'])
+
+export const testRequirementSchema = z.object({
+  type: testTypeSchema,
+  description: z.string(),
+  test_file: z.string().nullable(),
+  status: testStatusSchema,
+})
+
+export const evidenceTypeSchema = z.enum(['test_result', 'screenshot', 'review', 'log', 'manual'])
+
+export const evidenceSchema = z.object({
+  type: evidenceTypeSchema,
+  description: z.string(),
+  artifact_path: z.string(),
+  created_at: z.string(),
+})
+
+export const fileChangeSchema = z.object({
+  path: z.string(),
+  operation: z.enum(['added', 'modified', 'deleted']),
+})
+
+export const testRunResultSchema = z.object({
+  test_file: z.string(),
+  passed: z.number(),
+  failed: z.number(),
+  skipped: z.number(),
+  duration_ms: z.number(),
+  output: z.string().nullable(),
+})
+
+export const criterionStatusSchema = z.object({
+  criterion_id: z.string(),
+  passed: z.boolean(),
+  notes: z.string().nullable(),
+})
+
+export const executorResultSchema = z.object({
+  task_id: z.string(),
+  status: z.enum(['completed', 'failed', 'partial']),
+  summary: z.string(),
+  files_changed: z.array(fileChangeSchema),
+  tests_added: z.array(z.string()),
+  tests_run: z.array(testRunResultSchema),
+  acceptance_criteria_status: z.array(criterionStatusSchema),
+  issues: z.array(z.string()),
+  merge_recommendation: z.enum(['merge', 'revise', 'reject']),
+})
+
+export const taskSchema = z.object({
+  task_id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  rationale: z.string(),
+  phase: z.string(),
+  owner_role: ownerRoleSchema,
+  dependencies: z.array(z.string()),
+  files_in_scope: z.array(z.string()),
+  constraints: z.array(z.string()),
+  acceptance_criteria: z.array(acceptanceCriterionSchema),
+  test_requirements: z.array(testRequirementSchema),
+  review_requirements: z.array(z.string()),
+  qa_requirements: z.array(z.string()),
+  status: taskStatusSchema,
+  evidence: z.array(evidenceSchema),
+  result: executorResultSchema.nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})

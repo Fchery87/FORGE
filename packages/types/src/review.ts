@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type ReviewType = 'architecture' | 'implementation' | 'qa' | 'ship'
 export type ReviewVerdict = 'approved' | 'rejected' | 'conditional'
 
@@ -53,3 +55,26 @@ export const REVIEW_CHECKLISTS: Record<ReviewType, string[]> = {
     'State is consistent and accurate',
   ],
 }
+
+// --- Runtime schemas ---
+
+export const reviewTypeSchema = z.enum(['architecture', 'implementation', 'qa', 'ship'])
+export const reviewVerdictSchema = z.enum(['approved', 'rejected', 'conditional'])
+
+export const checklistItemSchema = z.object({
+  item: z.string(),
+  passed: z.boolean(),
+  note: z.string().nullable(),
+})
+
+export const reviewArtifactSchema = z.object({
+  review_id: z.string(),
+  type: reviewTypeSchema,
+  task_ids: z.array(z.string()),
+  reviewer_role: z.enum(['executive']),
+  verdict: reviewVerdictSchema,
+  checklist: z.array(checklistItemSchema),
+  findings: z.array(z.string()),
+  required_actions: z.array(z.string()),
+  created_at: z.string(),
+})
